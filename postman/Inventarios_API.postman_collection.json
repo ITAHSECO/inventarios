@@ -1,0 +1,598 @@
+{
+  "info": {
+    "name": "Inventarios API",
+    "description": "Coleccion de pruebas para el API de Sistema de Captura de Inventario",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/../../../health",
+            "header": []
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response has status ok', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /auth/signup",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/signup",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234\",\n  \"username\": \"testuser\",\n  \"nombres\": \"Usuario\",\n  \"apellidos\": \"Prueba\",\n  \"rol\": \"inventariador\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', function () { pm.response.to.have.status(201); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Test1234\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has access token', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.session.access_token).to.not.be.empty;",
+                  "    pm.collectionVariables.set('token', json.data.session.access_token);",
+                  "    pm.collectionVariables.set('userId', json.data.user.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has user data', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.data.username).to.eql('testuser');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /auth/refresh",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfiles",
+      "item": [
+        {
+          "name": "GET /perfiles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/perfiles?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["perfiles"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /perfiles/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/perfiles/{{userId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /perfiles",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/perfiles",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"newuser\",\n  \"nombres\": \"Nuevo\",\n  \"apellidos\": \"Usuario\",\n  \"rol\": \"inventariador\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /perfiles/:id",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/perfiles/{{userId}}",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombres\": \"Nombre Actualizado\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /perfiles/:id/pin",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/perfiles/{{userId}}/pin",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pin\": \"1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /perfiles/validate-pin",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/perfiles/validate-pin",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"pin\": \"1234\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalogos",
+      "item": [
+        {
+          "name": "GET /catalogos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalogos?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalogos"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /catalogos/activos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/catalogos/activos",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /catalogos/tablas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/catalogos/tablas",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /catalogos/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/catalogos/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /catalogos",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/catalogos",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_tabla\": \"ALMACEN\",\n  \"id_elemento\": \"ALM001\",\n  \"descripcion\": \"Almacen Principal\"\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /catalogos/:id",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/catalogos/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descripcion\": \"Almacen Principal Actualizado\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planillas",
+      "item": [
+        {
+          "name": "GET /planillas",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/planillas?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["planillas"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /planillas/barridos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/planillas/barridos",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /planillas/almacenes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/planillas/almacenes",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /planillas/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/planillas/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /planillas",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/planillas",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barrido\": \"BARRIDO-001\",\n  \"id_alm\": \"ALM001\",\n  \"codigo\": \"ART001\",\n  \"articulo\": \"Articulo de Prueba\",\n  \"existencia\": 100,\n  \"maneja_serie_lote\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /planillas/bulk",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/planillas/bulk",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planillas\": [\n    {\n      \"barrido\": \"BARRIDO-001\",\n      \"id_alm\": \"ALM001\",\n      \"codigo\": \"ART001\",\n      \"articulo\": \"Articulo 1\",\n      \"existencia\": 100\n    },\n    {\n      \"barrido\": \"BARRIDO-001\",\n      \"id_alm\": \"ALM001\",\n      \"codigo\": \"ART002\",\n      \"articulo\": \"Articulo 2\",\n      \"existencia\": 200\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /planillas/:id",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/planillas/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"existencia\": 150\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /planillas/:id",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/planillas/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conteos",
+      "item": [
+        {
+          "name": "GET /conteos",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/conteos?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["conteos"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /conteos/mis-conteos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/conteos/mis-conteos",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /conteos/:id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/conteos/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "POST /conteos",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/conteos",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planilla_id\": 1,\n  \"ubicacion\": \"ESTANTE-01\",\n  \"conteo\": 50,\n  \"serie_lote\": \"-\",\n  \"observacion\": \"Conteo de prueba\"\n}"
+            }
+          }
+        },
+        {
+          "name": "POST /conteos/bulk",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/conteos/bulk",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"capturas\": [\n    {\n      \"planilla_id\": 1,\n      \"ubicacion\": \"ESTANTE-01\",\n      \"conteo\": 50,\n      \"serie_lote\": \"-\"\n    },\n    {\n      \"planilla_id\": 2,\n      \"ubicacion\": \"ESTANTE-02\",\n      \"conteo\": 75,\n      \"serie_lote\": \"-\"\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /conteos/:id",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/conteos/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conteo\": 60\n}"
+            }
+          }
+        },
+        {
+          "name": "PUT /conteos/:id/supervisor-edit",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/conteos/1/supervisor-edit",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Supervisor-Pin", "value": "1234" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conteo\": 65,\n  \"observacion\": \"Correccion por supervisor\"\n}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /conteos/:id",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/conteos/1",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reportes",
+      "item": [
+        {
+          "name": "GET /reportes/dashboard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reportes/dashboard",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /reportes/resumen-diferencias",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reportes/resumen-diferencias?page=1&limit=25",
+              "host": ["{{baseUrl}}"],
+              "path": ["reportes", "resumen-diferencias"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        },
+        {
+          "name": "GET /reportes/resumen-diferencias-completo",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reportes/resumen-diferencias-completo",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

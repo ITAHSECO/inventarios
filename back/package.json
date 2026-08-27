@@ -1,0 +1,19 @@
+{
+  "name": "inventarios-api",
+  "version": "1.0.0",
+  "description": "API REST - Sistema de Captura de Inventario",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest --coverage",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
