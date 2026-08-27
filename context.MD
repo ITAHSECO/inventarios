@@ -111,3 +111,237 @@ Se utiliza una función optimizada `SECURITY DEFINER` llamada `public.fn_obtener
 -db: m4ximOabr1l524+
 -anon public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTY2NzAsImV4cCI6MjA4MzQ3MjY3MH0.qdb8dbvjGmXDK1FPsk5pz4rdugpOla2cqyefAxSxQBY
 -service role: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzg5NjY3MCwiZXhwIjoyMDgzNDcyNjcwfQ.kx7mH3YcaMl4vJr3pNmpwQ94f4LtLdHWslXIfcSmfW4
+
+---
+
+## 7. ARQUITECTURA DEL BACKEND (Node.js + Express)
+
+### Stack Técnico
+- **Runtime**: Node.js >= 22.0.0 (requerido por @supabase/supabase-js para WebSocket nativo)
+- **Framework**: Express.js 4.x
+- **DB Client**: @supabase/supabase-js 2.49+ (dual client: service role + user context)
+- **Validación**: Zod (schemas por módulo)
+- **Seguridad**: Helmet, CORS, Rate Limiting (express-rate-limit)
+- **Logging**: Pino + pino-pretty (desarrollo)
+- **Documentación**: Swagger UI (swagger-jsdoc + swagger-ui-express)
+
+### Estructura de Carpetas
+```
+back/
+├── .env                          # Variables de entorno (NO se commitea)
+├── .env.example                  # Plantilla de variables
+├── package.json                  # Dependencias y scripts
+├── render.yaml                   # Config IaC para Render
+└── src/
+    ├── index.js                  # Entry point (server startup)
+    ├── app.js                    # Express app (middleware + rutas)
+    ├── config/
+    │   ├── index.js              # Config centralizada (lee .env)
+    │   ├── supabase.js           # Dual client (admin + anon + user context)
+    │   └── swagger.js            # Config OpenAPI 3.0
+    ├── middleware/
+    │   ├── auth.js               # JWT auth via Supabase
+    │   ├── rbac.js               # Role-based access control
+    │   ├── pin.js                # Validación PIN supervisor
+    │   ├── validate.js           # Zod validation
+    │   ├── errorHandler.js       # Error handler centralizado
+    │   └── rateLimiter.js        # Rate limiting
+    ├── routes/                   # 6 grupos de rutas con JSDoc
+    ├── controllers/              # Lógica request/response
+    ├── services/                 # Lógica de negocio + Supabase
+    ├── validators/               # Schemas Zod por módulo
+    └── utils/                    # ApiError, apiResponse, logger, normalize
+```
+
+### Dual Supabase Client
+El backend usa **dos clientes** Supabase por request:
+1. **Service Role Client** (`supabaseAdmin`): Bypasea RLS. Solo para operaciones admin.
+2. **User Context Client** (`createUserClient(token)`): Respeta RLS. Para operaciones de campo.
+
+**NUNCA** exponer `SUPABASE_SERVICE_ROLE_KEY` al frontend.
+
+---
+
+## 8. ENDPOINTS API (`/api`)
+
+### Auth (`/api/auth`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| POST | `/signup` | Registrar usuario | Público |
+| POST | `/login` | Iniciar sesión | Público |
+| POST | `/logout` | Cerrar sesión | Autenticado |
+| GET | `/me` | Obtener perfil actual | Autenticado |
+| POST | `/refresh` | Refrescar token | Público |
+| PUT | `/password` | Cambiar contraseña | Autenticado |
+
+### Perfiles (`/api/perfiles`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/` | Listar perfiles (paginado) | superadmin, admin |
+| GET | `/:id` | Obtener perfil | Autenticado |
+| POST | `/` | Crear perfil | superadmin |
+| PUT | `/:id` | Actualizar perfil | superadmin, admin |
+| PUT | `/:id/pin` | Establecer PIN | superadmin, admin |
+| POST | `/validate-pin` | Validar PIN | superadmin, admin |
+
+### Catálogos (`/api/catalogos`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/` | Listar catálogos (paginado) | Autenticado |
+| GET | `/activos` | Vista de catálogos activos | Autenticado |
+| GET | `/tablas` | Tipos de tabla únicos | Autenticado |
+| GET | `/:id` | Obtener catálogo | Autenticado |
+| POST | `/` | Crear catálogo | superadmin, admin |
+| PUT | `/:id` | Actualizar catálogo | superadmin, admin |
+
+### Planillas (`/api/planillas`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/` | Listar planillas (paginado) | Autenticado |
+| GET | `/barridos` | Códigos de barrido únicos | Autenticado |
+| GET | `/almacenes` | Almacenes únicos | Autenticado |
+| GET | `/:id` | Obtener planilla | Autenticado |
+| GET | `/:id/conteos` | Conteos de una planilla | Autenticado |
+| POST | `/` | Crear planilla | superadmin, admin |
+| POST | `/bulk` | Carga masiva de planillas | superadmin, admin |
+| PUT | `/:id` | Actualizar planilla | superadmin, admin |
+| DELETE | `/:id` | Eliminar planilla | superadmin |
+
+### Conteos (`/api/conteos`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/mis-conteos` | Conteos del inventariador | inventariador |
+| GET | `/` | Listar conteos (paginado) | Autenticado |
+| GET | `/:id` | Obtener conteo | Autenticado |
+| POST | `/` | Crear conteo (captura campo) | inventariador, admin, superadmin |
+| POST | `/bulk` | Carga masiva (sync offline) | inventariador, admin, superadmin |
+| PUT | `/:id` | Actualizar conteo | inventor, admin, superadmin |
+| PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
+| DELETE | `/:id` | Eliminar conteo | admin, superadmin |
+
+### Reportes (`/api/reportes`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/dashboard` | Métricas agregadas | Autenticado |
+| GET | `/resumen-diferencias` | Resumen paginado de diferencias | Autenticado |
+| GET | `/resumen-diferencias-completo` | Resumen completo (EXACTO/SOBRANTE/FALTANTE) | Autenticado |
+
+---
+
+## 9. DESPLIEGUE EN RENDER
+
+### Configuración del Servicio
+| Campo | Valor |
+|-------|-------|
+| Name | `inventarios-api` |
+| Runtime | Node |
+| Root Directory | `back` |
+| Build Command | `npm install` |
+| Start Command | `node src/index.js` |
+| Health Check | `/health` |
+
+### Variables de Entorno (Render)
+```
+NODE_ENV=production
+NODE_VERSION=22
+PORT=10000
+SUPABASE_URL=https://mgapfghsthvkxgpslgic.supabase.co
+SUPABASE_ANON_KEY=<anon key>
+SUPABASE_SERVICE_ROLE_KEY=<service role key>
+CORS_ORIGINS=https://inventarios-d4uj.onrender.com,https://itahseco.github.io
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_AUTH_MAX=20
+```
+
+### URLs de Despliegue
+- **API**: `https://inventarios-d4uj.onrender.com`
+- **Swagger UI**: `https://inventarios-d4uj.onrender.com/docs`
+- **OpenAPI Spec**: `https://inventarios-d4uj.onrender.com/api/docs.json`
+- **Health Check**: `https://inventarios-d4uj.onrender.com/health`
+
+### CORS
+El backend acepta requests desde:
+- `https://inventarios-d4uj.onrender.com` (producción)
+- `https://itahseco.github.io` (frontend en GitHub Pages)
+- `http://localhost:5173` (desarrollo local Vite)
+- `http://localhost:3000` (desarrollo local)
+
+Headers permitidos: `Content-Type`, `Authorization`, `X-Supervisor-Pin`, `X-Supervisor-Username`
+
+---
+
+## 10. ESTRUCTURA DEL PROYECTO
+
+```
+inventarios/
+├── context.MD                    # Este archivo (contexto del proyecto)
+├── back/                         # Backend Node.js (API REST)
+│   ├── .env                      # Variables de entorno (NO commitear)
+│   ├── .env.example              # Plantilla
+│   ├── package.json              # Dependencias
+│   ├── render.yaml               # Config Render IaC
+│   └── src/                      # Código fuente
+├── front/                        # Frontend (archivos estáticos para GitHub Pages)
+├── postman/                      # Colecciones Postman para testing
+│   └── Inventarios_API.postman_collection.json
+└── utiles/                       # Utilidades de soporte (Python/ejecutables)
+```
+
+---
+
+## 11. CONSIDERACIONES PARA EL FRONTEND
+
+### Autenticación
+- El frontend debe almacenar `access_token` y `refresh_token` de Supabase
+- Enviar `Authorization: Bearer <access_token>` en cada request
+- Refrescar el token antes de que expire (usa el endpoint `/api/auth/refresh`)
+
+### RLS y Permisos
+- El frontend debe respetar los roles: solo mostrar botones/acciones según el rol del usuario
+- Los inventariadores solo ven sus propios conteos
+- La edición de supervisor requiere PIN (header `X-Supervisor-Pin`)
+
+### Offline Sync (Capturas de Campo)
+- Las capturas pueden crearse en modo offline usando `POST /api/conteos/bulk`
+- Incluir `client_capture_id` (UUID) para idempotencia
+- Sincronizar cuando haya conectividad
+
+### Paginación Estándar
+```json
+{
+  "success": true,
+  "data": [...],
+  "meta": {
+    "total": 150,
+    "page": 1,
+    "limit": 25,
+    "totalPages": 6
+  }
+}
+```
+
+### Normalización
+El backend automáticamente aplica `UPPER(TRIM())` a:
+- Claves de catálogos (id_tabla, id_elemento)
+- Ubicaciones
+- Series/Lotes
+- Códigos de barrido y almacén
+
+---
+
+## 12. COLECCIONES POSTMAN
+
+El archivo `postman/Inventarios_API.postman_collection.json` contiene requests para todos los endpoints organizados por módulo:
+- Health Check
+- Auth (signup, login, logout, me, refresh, password)
+- Perfiles (CRUD + PIN)
+- Catálogos (CRUD + activos + tablas)
+- Planillas (CRUD + bulk + barridos/almacenes)
+- Conteos (CRUD + bulk + supervisor-edit + mis-conteos)
+- Reportes (dashboard + resumen-diferencias)
+
+Variables de colección:
+- `baseUrl`: `http://localhost:3000/api` (cambiar según entorno)
+- `token`: Se auto-asigna tras login exitoso
+- `userId`: Se auto-asigna tras login exitoso
