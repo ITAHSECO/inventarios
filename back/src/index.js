@@ -7,12 +7,12 @@ const server = app.listen(config.port, () => {
   logger.info(`Entorno: ${config.nodeEnv}`);
 });
 
-process.on('unhandledRejection', (err) => {
-  logger.error('UNHANDLED REJECTION:', err);
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ err: reason }, 'UNHANDLED REJECTION');
   server.close(() => process.exit(1));
 });
 
 process.on('uncaughtException', (err) => {
-  logger.error('UNCAUGHT EXCEPTION:', err);
+  logger.error({ err: { message: err.message, stack: err.stack, name: err.name } }, 'UNCAUGHT EXCEPTION');
   server.close(() => process.exit(1));
 });
