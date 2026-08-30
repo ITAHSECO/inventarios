@@ -7,7 +7,7 @@ const signupSchema = z.object({
     username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_.]+$/, 'Username solo puede contener letras, numeros, guiones bajos y puntos'),
     nombres: z.string().min(1).max(100),
     apellidos: z.string().min(1).max(100),
-    rol: z.enum(['superadmin', 'admin', 'inventariador', 'reportes']).optional(),
+    rol: z.string().optional().transform(val => val ? val.toLowerCase() : val),
   }),
 });
 
