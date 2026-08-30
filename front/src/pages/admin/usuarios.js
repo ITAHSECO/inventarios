@@ -1,5 +1,6 @@
 import { perfilesService } from '../../services/perfiles.service.js';
 import { catalogosService } from '../../services/catalogos.service.js';
+import { authService } from '../../services/auth.service.js';
 
 const ROLE_LABELS = {
   superadmin: 'Super Administrador',
@@ -199,6 +200,14 @@ function openCreateModal() {
   document.getElementById('modalTitle').textContent = 'Nuevo Usuario';
   document.getElementById('modalBody').innerHTML = `
     <div class="form-group">
+      <label for="m_email">Correo electronico</label>
+      <input type="email" id="m_email" required placeholder="correo@ejemplo.com">
+    </div>
+    <div class="form-group">
+      <label for="m_password">Contrasena</label>
+      <input type="password" id="m_password" required minlength="6" placeholder="Minimo 6 caracteres">
+    </div>
+    <div class="form-group">
       <label for="m_username">Usuario</label>
       <input type="text" id="m_username" required minlength="3" maxlength="50" pattern="[a-zA-Z0-9_.]+" placeholder="letras, numeros, _ .">
     </div>
@@ -223,7 +232,7 @@ function openCreateModal() {
   pendingFormAction = 'create';
   pendingFormId = null;
   document.getElementById('modalOverlay').style.display = 'flex';
-  document.getElementById('m_username').focus();
+  document.getElementById('m_email').focus();
 }
 
 function openEditModal(user) {
@@ -276,20 +285,34 @@ async function handleFormSubmit(e) {
   if (rol) data.rol = rol.value;
 
   if (pendingFormAction === 'create') {
+    const email = document.getElementById('m_email');
+    const password = document.getElementById('m_password');
     const username = document.getElementById('m_username');
+    if (!email || !email.value.trim()) {
+      errorDiv.textContent = 'El correo es requerido';
+      errorDiv.style.display = 'block';
+      return;
+    }
+    if (!password || password.value.length < 6) {
+      errorDiv.textContent = 'La contrasena debe tener al menos 6 caracteres';
+      errorDiv.style.display = 'block';
+      return;
+    }
     if (!username || !username.value.trim()) {
       errorDiv.textContent = 'El usuario es requerido';
       errorDiv.style.display = 'block';
       return;
     }
+    data.email = email.value.trim();
+    data.password = password.value;
     data.username = username.value.trim();
   }
 
   try {
     if (pendingFormAction === 'create') {
-      console.log('[Usuarios] Creating:', data);
-      await perfilesService.create(data);
-      console.log('[Usuarios] Created');
+      console.log('[Usuarios] Creating via signup:', { email: data.email, username: data.username, rol: data.rol });
+      await authService.signup(data);
+      console.log('[Usuarios] Created via signup');
     } else {
       console.log('[Usuarios] Updating:', pendingFormId, data);
       await perfilesService.update(pendingFormId, data);
