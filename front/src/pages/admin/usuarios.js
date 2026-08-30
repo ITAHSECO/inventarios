@@ -24,7 +24,10 @@ export async function renderUsuarios(container) {
   container.innerHTML = `
     <div class="page-container">
       <header class="page-header">
-        <h1>Gestion de Usuarios</h1>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <a href="#/dashboard" class="btn btn-outline btn-sm">&larr; Dashboard</a>
+          <h1>Gestion de Usuarios</h1>
+        </div>
         <button class="btn btn-primary btn-sm" id="btnNuevo">Nuevo Usuario</button>
       </header>
 
