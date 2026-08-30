@@ -63,8 +63,8 @@ async function handleLogin(e) {
     localStorage.setItem('refresh_token', session.refresh_token);
     localStorage.setItem('user', JSON.stringify(user));
 
-    console.log('[Login] Success, redirecting to dashboard', user);
-    window.location.hash = '#/dashboard';
+    console.log('[Login] Success, redirecting', user);
+    window.location.hash = user.rol === 'inventariador' ? '#/captura' : '#/dashboard';
   } catch (err) {
     console.error('[Login] Failed:', err.message);
     errorDiv.textContent = err.message;

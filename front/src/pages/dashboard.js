@@ -45,6 +45,12 @@ export function renderDashboard(container) {
     return;
   }
 
+  if (user.rol === 'inventariador') {
+    console.log('[Dashboard] Inventariador detected, redirecting to capture');
+    window.location.hash = '#/captura';
+    return;
+  }
+
   console.log('[Dashboard] Rendering for user:', { username: user.username, rol: user.rol });
   const roleLabel = ROLE_LABELS[user.rol] || user.rol;
   const menuItems = ROLE_MENU[user.rol] || [];
