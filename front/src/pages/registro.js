@@ -6,7 +6,7 @@ export async function renderRegistro(container) {
 
   try {
     console.log('[Registro] Loading roles from maestra_parametros...');
-    const res = await catalogosService.getActivos('ROL');
+    const res = await catalogosService.getActivos('ROLES');
     roles = res.data || [];
     console.log('[Registro] Roles loaded:', roles);
   } catch (err) {
