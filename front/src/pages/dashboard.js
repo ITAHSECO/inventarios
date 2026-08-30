@@ -1,3 +1,5 @@
+import { authService } from '../services/auth.service.js';
+
 const ROLE_LABELS = {
   superadmin: 'Super Administrador',
   admin: 'Administrador',
@@ -38,10 +40,12 @@ export function renderDashboard(container) {
   const user = getUser();
 
   if (!user) {
+    console.warn('[Dashboard] No user found, redirecting to login');
     window.location.hash = '#/login';
     return;
   }
 
+  console.log('[Dashboard] Rendering for user:', { username: user.username, rol: user.rol });
   const roleLabel = ROLE_LABELS[user.rol] || user.rol;
   const menuItems = ROLE_MENU[user.rol] || [];
 
@@ -80,6 +84,7 @@ export function renderDashboard(container) {
   `;
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {
+    console.log('[Dashboard] Logout');
     try {
       await authService.logout();
     } catch {}

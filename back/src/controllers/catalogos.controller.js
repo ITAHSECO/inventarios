@@ -13,7 +13,7 @@ class CatalogosController {
 
   async getActivos(req, res, next) {
     try {
-      const data = await catalogosService.getActivos();
+      const data = await catalogosService.getActivos(req.query.id_tabla);
       return success(res, data);
     } catch (error) {
       next(error);

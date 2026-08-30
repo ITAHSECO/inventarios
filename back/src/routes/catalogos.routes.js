@@ -12,6 +12,38 @@ const {
 
 const router = Router();
 
+/**
+ * @swagger
+ * /catalogos/activos:
+ *   get:
+ *     tags: [Catálogos]
+ *     summary: Obtener catálogos activos
+ *     description: Retorna todos los catálogos con activo=true usando la vista vw_catalogos_activos. Soporta filtro por id_tabla.
+ *     parameters:
+ *       - in: query
+ *         name: id_tabla
+ *         schema:
+ *           type: string
+ *         description: Filtrar por tipo de catálogo (ROL, ALMACEN, MARCA, etc.)
+ *     responses:
+ *       200:
+ *         description: Catálogos activos
+ */
+router.get('/activos', catalogosController.getActivos);
+
+/**
+ * @swagger
+ * /catalogos/tablas:
+ *   get:
+ *     tags: [Catálogos]
+ *     summary: Listar tipos de tabla únicos
+ *     description: Retorna los valores distintos de id_tabla para poblar dropdowns.
+ *     responses:
+ *       200:
+ *         description: Lista de tipos de tabla
+ */
+router.get('/tablas', catalogosController.getTablas);
+
 router.use(authenticateToken);
 
 /**
@@ -56,59 +88,6 @@ router.use(authenticateToken);
  *               $ref: '#/components/schemas/PaginatedResponse'
  */
 router.get('/', validate(listCatalogosSchema), catalogosController.list);
-
-/**
- * @swagger
- * /catalogos/activos:
- *   get:
- *     tags: [Catálogos]
- *     summary: Obtener catálogos activos
- *     description: Retorna todos los catálogos con activo=true usando la vista vw_catalogos_activos.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Catálogos activos
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Catalogo'
- */
-router.get('/activos', catalogosController.getActivos);
-
-/**
- * @swagger
- * /catalogos/tablas:
- *   get:
- *     tags: [Catálogos]
- *     summary: Listar tipos de tabla únicos
- *     description: Retorna los valores distintos de id_tabla para poblar dropdowns.
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Lista de tipos de tabla
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: array
- *                   items:
- *                     type: string
- *                   example: [ALMACEN, MARCA, CATEGORIA]
- */
-router.get('/tablas', catalogosController.getTablas);
 
 /**
  * @swagger

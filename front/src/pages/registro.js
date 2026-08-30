@@ -5,9 +5,12 @@ export async function renderRegistro(container) {
   let roles = [];
 
   try {
+    console.log('[Registro] Loading roles from maestra_parametros...');
     const res = await catalogosService.getActivos('ROL');
     roles = res.data || [];
-  } catch {
+    console.log('[Registro] Roles loaded:', roles);
+  } catch (err) {
+    console.error('[Registro] Failed to load roles:', err.message);
     roles = [];
   }
 
@@ -32,7 +35,7 @@ export async function renderRegistro(container) {
           <div class="form-group">
             <label for="username">Usuario</label>
             <input type="text" id="username" name="username" required minlength="3" maxlength="50"
-                   pattern="[a-zA-Z0-9_]+" placeholder="Solo letras, numeros y guiones bajos">
+                   pattern="[a-zA-Z0-9_.]+" placeholder="Solo letras, numeros, guiones bajos y puntos">
           </div>
 
           <div class="form-group">
@@ -98,12 +101,15 @@ async function handleSubmit(e) {
   btnSpinner.style.display = 'inline-block';
 
   try {
+    console.log('[Registro] Submitting signup:', { email: data.email, username: data.username, rol: data.rol });
     await authService.signup(data);
+    console.log('[Registro] Signup successful');
     successDiv.textContent = 'Usuario registrado exitosamente. Redirigiendo...';
     successDiv.style.display = 'block';
     form.reset();
     setTimeout(() => { window.location.hash = '#/login'; }, 2000);
   } catch (err) {
+    console.error('[Registro] Signup failed:', err.message);
     errorDiv.textContent = err.message;
     errorDiv.style.display = 'block';
   } finally {

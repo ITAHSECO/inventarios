@@ -49,9 +49,12 @@ function router() {
   const route = hash.replace('#', '');
   const render = routes[route];
 
+  console.log('[Router]', route);
+
   if (render) {
     render(app);
   } else {
+    console.warn('[Router] Route not found:', route);
     app.innerHTML = '<p style="text-align:center;padding:2rem;">Pagina no encontrada</p>';
   }
 }

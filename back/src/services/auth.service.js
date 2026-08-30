@@ -1,8 +1,11 @@
 const { supabaseAdmin } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 class AuthService {
   async signup({ email, password, username, nombres, apellidos, rol }) {
+    logger.info({ email, username, rol }, '[AuthService] Signup attempt');
+
     const { data: existingUser } = await supabaseAdmin
       .from('perfiles')
       .select('id')
@@ -10,6 +13,7 @@ class AuthService {
       .single();
 
     if (existingUser) {
+      logger.warn({ username }, '[AuthService] Username already exists');
       throw ApiError.conflict('El username ya esta en uso');
     }
 
@@ -21,22 +25,27 @@ class AuthService {
     });
 
     if (error) {
+      logger.error({ error: error.message, email }, '[AuthService] createUser failed');
       if (error.message.includes('already')) {
         throw ApiError.conflict('El email ya esta registrado');
       }
       throw ApiError.internal(error.message);
     }
 
+    logger.info({ userId: data.user.id, email, username }, '[AuthService] User created successfully');
     return { user: data.user };
   }
 
   async login({ email, password }) {
+    logger.info({ email }, '[AuthService] Login attempt');
+
     const { data, error } = await supabaseAdmin.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      logger.warn({ email, error: error.message }, '[AuthService] Login failed');
       throw ApiError.unauthorized('Credenciales invalidas');
     }
 
@@ -47,9 +56,11 @@ class AuthService {
       .single();
 
     if (perfil && !perfil.activo) {
+      logger.warn({ userId: data.user.id }, '[AuthService] User deactivated');
       throw ApiError.forbidden('Usuario desactivado');
     }
 
+    logger.info({ userId: data.user.id, email, rol: perfil?.rol }, '[AuthService] Login successful');
     return {
       user: {
         id: data.user.id,

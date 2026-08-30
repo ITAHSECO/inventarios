@@ -19,7 +19,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 
 ### A. `public.perfiles` (Extensión de `auth.users`)
 - `id` (UUID, PK, FK `auth.users.id` ON DELETE CASCADE)
-- `username` (VARCHAR(50), UNIQUE, NOT NULL)
+- `username` (VARCHAR(50), UNIQUE, NOT NULL) -> Permite letras, números, guiones bajos y puntos (`^[a-zA-Z0-9_.]+$`)
 - `nombres` (VARCHAR(100), NOT NULL)
 - `apellidos` (VARCHAR(100), NOT NULL)
 - `rol` (app_role, DEFAULT 'inventariador', NOT NULL)
@@ -187,9 +187,9 @@ El backend usa **dos clientes** Supabase por request:
 ### Catálogos (`/api/catalogos`)
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
+| GET | `/activos` | Catálogos activos (filtro `?id_tabla=ROL`) | **Público** |
+| GET | `/tablas` | Tipos de tabla únicos | **Público** |
 | GET | `/` | Listar catálogos (paginado) | Autenticado |
-| GET | `/activos` | Vista de catálogos activos | Autenticado |
-| GET | `/tablas` | Tipos de tabla únicos | Autenticado |
 | GET | `/:id` | Obtener catálogo | Autenticado |
 | POST | `/` | Crear catálogo | superadmin, admin |
 | PUT | `/:id` | Actualizar catálogo | superadmin, admin |
@@ -282,11 +282,45 @@ inventarios/
 │   ├── package.json              # Dependencias
 │   ├── render.yaml               # Config Render IaC
 │   └── src/                      # Código fuente
-├── front/                        # Frontend (archivos estáticos para GitHub Pages)
+├── front/                        # Frontend (Vite + vanilla JS, deploy GitHub Pages)
+│   ├── src/
+│   │   ├── main.js               # Router hash + entry point
+│   │   ├── pages/                # Paginas por modulo
+│   │   │   ├── login.js          # Login (default)
+│   │   │   ├── registro.js       # Registro de usuarios
+│   │   │   ├── dashboard.js      # Dashboard con menu por rol
+│   │   │   ├── admin/            # usuarios, maestra, cargas
+│   │   │   ├── inventariador/    # captura
+│   │   │   └── reportes/         # reportes
+│   │   ├── services/             # api.js, auth.service.js, catalogos.service.js
+│   │   ├── styles/               # auth.css, dashboard.css
+│   │   └── utils/                # constants.js (API_BASE)
+│   ├── public/assets/            # Logo personalizable (logo.png)
+│   └── dist/                     # Build output (deploy a GitHub Pages)
 ├── postman/                      # Colecciones Postman para testing
 │   └── Inventarios_API.postman_collection.json
-└── utiles/                       # Utilidades de soporte (Python/ejecutables)
+└── utiles/                       # Utilidades de soporte
+    ├── keep_alive.py             # Script para mantener Render activo
+    └── requirements.txt
 ```
+
+### Frontend - Rutas Hash
+| Ruta | Pagina | Acceso |
+|------|--------|--------|
+| `#/login` | Login | Guest |
+| `#/registro` | Registro | Guest |
+| `#/dashboard` | Dashboard | Autenticado |
+| `#/admin/usuarios` | Gestion Usuarios | superadmin, admin |
+| `#/admin/maestra` | Tabla Maestra | superadmin, admin |
+| `#/admin/cargas` | Cargas Masivas | superadmin, admin |
+| `#/captura` | Captura Inventario | inventariador |
+| `#/reportes` | Reportes | Todos |
+
+### GitHub Pages
+- **URL**: `https://itahseco.github.io/inventarios/`
+- **Deploy**: GitHub Actions (`.github/workflows/deploy-front.yml`)
+- **Build**: `vite build` → `front/dist/`
+- **Base path**: `/inventarios/`
 
 ---
 
@@ -296,6 +330,11 @@ inventarios/
 - El frontend debe almacenar `access_token` y `refresh_token` de Supabase
 - Enviar `Authorization: Bearer <access_token>` en cada request
 - Refrescar el token antes de que expire (usa el endpoint `/api/auth/refresh`)
+
+### Logging
+- Frontend: `console.log/warn/error` con prefijo `[API]`, `[Login]`, `[Registro]`, `[Dashboard]`, `[Router]`
+- Backend: Pino logger con prefijo `[AuthService]`, `[CatalogosService]`, `[Auth]`
+- Errores de API se loguean con status code y endpoint
 
 ### RLS y Permisos
 - El frontend debe respetar los roles: solo mostrar botones/acciones según el rol del usuario

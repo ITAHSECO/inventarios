@@ -34,6 +34,8 @@ const router = Router();
  *                 type: string
  *                 minLength: 3
  *                 maxLength: 50
+ *                 pattern: '^[a-zA-Z0-9_.]+$'
+ *                 description: Letras, numeros, guiones bajos y puntos
  *                 example: jdoe
  *               nombres:
  *                 type: string

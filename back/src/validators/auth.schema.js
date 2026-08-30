@@ -4,7 +4,7 @@ const signupSchema = z.object({
   body: z.object({
     email: z.string().email('Email invalido'),
     password: z.string().min(6, 'La contrasena debe tener al menos 6 caracteres'),
-    username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/, 'Username solo puede contener letras, numeros y guiones bajos'),
+    username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_.]+$/, 'Username solo puede contener letras, numeros, guiones bajos y puntos'),
     nombres: z.string().min(1).max(100),
     apellidos: z.string().min(1).max(100),
     rol: z.enum(['superadmin', 'admin', 'inventariador', 'reportes']).optional(),

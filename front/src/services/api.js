@@ -8,18 +8,27 @@ async function request(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  console.log(`[API] ${options.method || 'GET'} ${endpoint}`);
 
-  const data = await response.json();
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'Error en la solicitud');
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error(`[API] ${response.status} ${endpoint}`, data);
+      throw new Error(data.error?.message || 'Error en la solicitud');
+    }
+
+    console.log(`[API] OK ${endpoint}`, data);
+    return data;
+  } catch (err) {
+    console.error(`[API] ERROR ${endpoint}`, err.message);
+    throw err;
   }
-
-  return data;
 }
 
 export const api = {

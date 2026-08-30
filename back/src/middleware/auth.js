@@ -1,6 +1,7 @@
 const { supabaseAdmin } = require('../config/supabase');
 const { supabaseAnon } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 async function authenticateToken(req, res, next) {
   try {
@@ -13,6 +14,7 @@ async function authenticateToken(req, res, next) {
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
+      logger.warn({ error: error?.message }, '[Auth] Invalid token');
       throw ApiError.unauthorized('Token de acceso invalido o expirado');
     }
 
@@ -40,6 +42,7 @@ async function authenticateToken(req, res, next) {
       token,
     };
 
+    logger.debug({ userId: user.id, username: perfil.username, rol: perfil.rol }, '[Auth] User authenticated');
     next();
   } catch (error) {
     if (error.isOperational) {

@@ -1,8 +1,10 @@
 const { supabaseAdmin } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 class CatalogosService {
   async list({ page, limit, id_tabla, activo, search }) {
+    logger.info({ page, limit, id_tabla, activo, search }, '[CatalogosService] List');
     let query = supabaseAdmin.from('maestra_parametros').select('*', { count: 'exact' });
 
     if (id_tabla) query = query.eq('id_tabla', id_tabla.toUpperCase().trim());
@@ -23,12 +25,19 @@ class CatalogosService {
     return { data, total: count };
   }
 
-  async getActivos() {
-    const { data, error } = await supabaseAdmin
+  async getActivos(id_tabla) {
+    logger.info({ id_tabla }, '[CatalogosService] getActivos');
+    let query = supabaseAdmin
       .from('vw_catalogos_activos')
       .select('*')
       .order('id_tabla')
       .order('id_elemento');
+
+    if (id_tabla) {
+      query = query.eq('id_tabla', id_tabla.toUpperCase().trim());
+    }
+
+    const { data, error } = await query;
 
     if (error) throw ApiError.internal(error.message);
     return data;
