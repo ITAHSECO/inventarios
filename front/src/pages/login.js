@@ -57,12 +57,13 @@ async function handleLogin(e) {
   try {
     console.log('[Login] Attempting login...');
     const result = await authService.login(data);
+    const { user, session } = result.data;
 
-    localStorage.setItem('access_token', result.session.access_token);
-    localStorage.setItem('refresh_token', result.session.refresh_token);
-    localStorage.setItem('user', JSON.stringify(result.user));
+    localStorage.setItem('access_token', session.access_token);
+    localStorage.setItem('refresh_token', session.refresh_token);
+    localStorage.setItem('user', JSON.stringify(user));
 
-    console.log('[Login] Success, redirecting to dashboard', result.user);
+    console.log('[Login] Success, redirecting to dashboard', user);
     window.location.hash = '#/dashboard';
   } catch (err) {
     console.error('[Login] Failed:', err.message);
