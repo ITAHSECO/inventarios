@@ -257,6 +257,7 @@
 .badge-admin { background: #dbeafe; color: #1d4ed8; }
 .badge-inventariador { background: #d1fae5; color: #047857; }
 .badge-reportes { background: #fef3c7; color: #92400e; }
+.badge-tabla { background: #e0e7ff; color: #3730a3; }
 
 .status {
   font-size: 0.75rem;
