@@ -100,7 +100,7 @@ async function loadUsuarios() {
     const params = { page: currentPage, limit: 10 };
     if (currentSearch) params.search = currentSearch;
     if (currentRol) params.rol = currentRol;
-    if (currentActivo !== '') params.activo = currentActivo;
+    if (currentActivo !== '') params.activo = currentActivo === 'true';
 
     console.log('[Usuarios] Loading:', params);
     const result = await perfilesService.list(params);
