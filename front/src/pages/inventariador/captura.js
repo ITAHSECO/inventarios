@@ -18,7 +18,7 @@ export async function renderCaptura(container) {
   try {
     const [barridosRes, unidadesRes] = await Promise.all([
       barridosService.getMisBarridos(),
-      catalogosService.getActivos('UNIDAD'),
+      catalogosService.getActivos('CUNIDAD'),
     ]);
     barridos = barridosRes.data || [];
     unidades = unidadesRes.data || [];
