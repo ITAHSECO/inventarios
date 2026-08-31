@@ -6,6 +6,7 @@ import { planillasService } from '../../services/planillas.service.js';
 let barridos = [];
 let unidades = [];
 let currentBarrido = '';
+let currentBarridoId = null;
 let searchTimer = null;
 
 function getUser() {
@@ -46,7 +47,7 @@ export async function renderCaptura(container) {
           <div class="filters-bar">
             <select id="filterBarrido" class="filter-select" style="flex:1;">
               <option value="">-- Seleccione barrido --</option>
-              ${barridos.map(b => `<option value="${b.nombre}">${b.nombre}</option>`).join('')}
+              ${barridos.map(b => `<option value="${b.id}" data-nombre="${b.nombre}">${b.nombre}</option>`).join('')}
             </select>
           </div>
         </div>
@@ -126,10 +127,12 @@ function bindEvents() {
   document.getElementById('filterBarrido').addEventListener('change', (e) => {
     const val = e.target.value;
     if (val) {
-      currentBarrido = val;
+      const opt = e.target.options[e.target.selectedIndex];
+      currentBarridoId = parseInt(val, 10);
+      currentBarrido = opt.dataset.nombre;
       document.getElementById('barridoSection').querySelector('.section-title').textContent = 'Barrido Activo';
       document.getElementById('barridoActivo').style.display = 'flex';
-      document.getElementById('barridoNombre').textContent = val;
+      document.getElementById('barridoNombre').textContent = currentBarrido;
       document.getElementById('filterBarrido').style.display = 'none';
       document.getElementById('formSection').style.display = 'block';
       document.getElementById('countsSection').style.display = 'block';
@@ -140,6 +143,7 @@ function bindEvents() {
 
   document.getElementById('changeBarrido').addEventListener('click', () => {
     currentBarrido = '';
+    currentBarridoId = null;
     document.getElementById('filterBarrido').value = '';
     document.getElementById('filterBarrido').style.display = '';
     document.getElementById('barridoSection').querySelector('.section-title').textContent = 'Seleccionar Barrido';
@@ -308,6 +312,7 @@ async function handleCaptureSubmit(e) {
   try {
     const data = {
       planilla_id: null,
+      id_barrido: currentBarridoId,
       barrido: currentBarrido,
       codigo,
       descripcion: descripcion || null,
