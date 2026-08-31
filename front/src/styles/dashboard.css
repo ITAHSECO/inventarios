@@ -258,6 +258,55 @@
 .badge-inventariador { background: #d1fae5; color: #047857; }
 .badge-reportes { background: #fef3c7; color: #92400e; }
 .badge-tabla { background: #e0e7ff; color: #3730a3; }
+.badge-estado-activo { background: #d1fae5; color: #047857; }
+.badge-estado-inactivo { background: #f3f4f6; color: #374151; }
+.badge-estado-cerrado { background: #fee2e2; color: #991b1b; }
+
+.asignados-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.asignado-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.asignado-chip .btn-icon {
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.checkbox-label:hover {
+  background: var(--gray-50);
+}
+
+.form-row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
 
 .status {
   font-size: 0.75rem;

@@ -68,6 +68,21 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `inventariador_id` (UUID, FK `public.perfiles.id`, NOT NULL)
 - `created_at`, `updated_at` (TIMESTAMPTZ)
 
+### E. `public.barridos` (Cabeceras de Campaña de Inventario)
+- `id` (BIGINT, GENERATED ALWAYS AS IDENTITY, PK)
+- `nombre` (VARCHAR(150), UNIQUE, NOT NULL) -> Nombre descriptivo del barrido
+- `estado` (VARCHAR(20), DEFAULT 'activo', NOT NULL) -> Valores: 'activo', 'inactivo', 'cerrado'
+- `fecha_inicio` (DATE, NOT NULL)
+- `fecha_fin` (DATE, NULL)
+- `creado_por` (UUID, FK `public.perfiles.id`, NULL)
+- `created_at`, `updated_at` (TIMESTAMPTZ)
+
+### F. `public.barrido_usuarios` (Asignación de Inventariadores a Barridos)
+- `barrido_id` (BIGINT, FK `public.barridos.id` ON DELETE CASCADE, PK)
+- `usuario_id` (UUID, FK `public.perfiles.id` ON DELETE CASCADE, PK)
+- `asignado_por` (UUID, FK `public.perfiles.id`, NULL)
+- `created_at` (TIMESTAMPTZ)
+
 ---
 
 ## 3. LÓGICA DE NEGOCIO Y REGLAS AUTOMÁTICAS (TRIGGERS Y FUNCIONES)
@@ -94,6 +109,8 @@ Se utiliza una función optimizada `SECURITY DEFINER` llamada `public.fn_obtener
   - `INSERT`: Requiere que `inventariador_id = auth.uid()`.
   - `UPDATE`: `superadmin` y `admin` pueden editar siempre. El `inventariador` solo si es su propio registro Y `modificado_por_supervisor = FALSE`.
   - `DELETE`: Exclusivo de `superadmin` y `admin`.
+- **`barridos`:** Lectura para autenticados. Inserción/Edición/Eliminación para `superadmin` y `admin`.
+- **`barrido_usuarios`:** Lectura para autenticados. Gestión exclusiva para `superadmin` y `admin`. `inventariador` puede ver sus propias asignaciones.
 
 ---
 
@@ -207,6 +224,20 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id` | Actualizar planilla | superadmin, admin |
 | DELETE | `/:id` | Eliminar planilla | superadmin |
 
+### Barridos (`/api/barridos`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/` | Listar barridos (paginado, filtro `?estado=&search=`) | Autenticado |
+| GET | `/:id` | Obtener barrido | Autenticado |
+| POST | `/` | Crear barrido | superadmin, admin |
+| PUT | `/:id` | Actualizar barrido | superadmin, admin |
+| DELETE | `/:id` | Eliminar barrido | superadmin |
+| GET | `/:id/usuarios` | Listar asignados al barrido | Autenticado |
+| POST | `/:id/usuarios` | Asignar inventariadores (`{ usuario_ids: [...] }`) | superadmin, admin |
+| DELETE | `/:id/usuarios/:uid` | Desasignar inventariador | superadmin, admin |
+| GET | `/mis-barridos` | Barridos asignados al inventariador actual | inventariador |
+| GET | `/inventariadores` | Listar inventariadores activos (para asignar) | superadmin, admin |
+
 ### Conteos (`/api/conteos`)
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
@@ -289,10 +320,10 @@ inventarios/
 │   │   │   ├── login.js          # Login (default)
 │   │   │   ├── registro.js       # Registro de usuarios
 │   │   │   ├── dashboard.js      # Dashboard con menu por rol
-│   │   │   ├── admin/            # usuarios, maestra, cargas
+│   │   │   ├── admin/            # usuarios, maestra, cargas, barridos
 │   │   │   ├── inventariador/    # captura
 │   │   │   └── reportes/         # reportes
-│   │   ├── services/             # api.js, auth.service.js, catalogos.service.js
+│   │   ├── services/             # api.js, auth.service.js, catalogos.service.js, barridos.service.js, planillas.service.js, conteos.service.js
 │   │   ├── styles/               # auth.css, dashboard.css
 │   │   └── utils/                # constants.js (API_BASE)
 │   ├── public/assets/            # Logo personalizable (logo.png)
@@ -313,6 +344,7 @@ inventarios/
 | `#/admin/usuarios` | Gestion Usuarios | superadmin, admin |
 | `#/admin/maestra` | Tabla Maestra | superadmin, admin |
 | `#/admin/cargas` | Cargas Masivas | superadmin, admin |
+| `#/admin/barridos` | Barridos | superadmin, admin |
 | `#/captura` | Captura Inventario | inventariador |
 | `#/reportes` | Reportes | Todos |
 

@@ -11,12 +11,14 @@ const ROLE_MENU = {
   superadmin: [
     { label: 'Gestion de Usuarios', icon: '👥', hash: '#/admin/usuarios' },
     { label: 'Tabla Maestra', icon: '📋', hash: '#/admin/maestra' },
+    { label: 'Barridos', icon: '📅', hash: '#/admin/barridos' },
     { label: 'Cargas Masivas', icon: '📁', hash: '#/admin/cargas' },
     { label: 'Reportes', icon: '📊', hash: '#/reportes' },
   ],
   admin: [
     { label: 'Gestion de Usuarios', icon: '👥', hash: '#/admin/usuarios' },
     { label: 'Tabla Maestra', icon: '📋', hash: '#/admin/maestra' },
+    { label: 'Barridos', icon: '📅', hash: '#/admin/barridos' },
     { label: 'Cargas Masivas', icon: '📁', hash: '#/admin/cargas' },
     { label: 'Reportes', icon: '📊', hash: '#/reportes' },
   ],
