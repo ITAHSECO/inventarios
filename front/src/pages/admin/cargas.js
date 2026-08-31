@@ -5,11 +5,11 @@ import { barridosService } from '../../services/barridos.service.js';
 import { parseCSVFile, rowsToObjects } from '../../utils/csv.js';
 
 const USUARIOS_HEADERS = ['email', 'password', 'username', 'nombres', 'apellidos', 'rol'];
-const CATALOGOS_HEADERS = ['id_tabla', 'id_elemento', 'descripcion', 'activo'];
+const CATALOGOS_HEADERS = ['id_elemento', 'descripcion', 'activo'];
 const PLANILLAS_HEADERS = ['codigo', 'cod_fab', 'existencia', 'descripcion', 'cunidad', 'id_alm', 'id_marca', 'id_categoria', 'serie_lote', 'vcto', 'maneja_serie_lote'];
 
 const USUARIOS_EXAMPLE = ['usuario@correo.com', 'MiPassword123', 'jdoe', 'Juan', 'Doe', 'inventariador'];
-const CATALOGOS_EXAMPLE = ['ALMACEN', 'ALM001', 'Almacen Principal', 'true'];
+const CATALOGOS_EXAMPLE = ['ALM001', 'Almacen Principal', 'true'];
 const PLANILLAS_EXAMPLE = ['COD001', 'FAB001', '10', 'Widget Standard', 'PIEZA', 'ALM001', 'MARCA1', 'CAT1', '-', '', 'false'];
 
 function downloadTemplate(filename, headers, exampleRow) {
@@ -61,7 +61,7 @@ export async function renderCargas(container) {
       <div id="tab-maestra" class="tab-content">
         <div class="carga-panel">
           <h2>Carga Masiva de Tablas Maestras</h2>
-          <p class="carga-hint">CSV con columnas: <code>id_elemento, descripcion, activo</code></p>
+          <p class="carga-hint">CSV con columnas: <code>id_elemento, descripcion, activo</code>. La tabla destino se selecciona arriba.</p>
           <button class="btn btn-outline btn-sm" id="m-template">Descargar plantilla CSV</button>
 
           <div class="form-group">
