@@ -455,29 +455,55 @@ async function initPlanilla() {
     btn.textContent = 'Cargando...';
 
     try {
-      const planillas = parsedData.map(row => ({
-        codigo: row.codigo,
-        cod_fab: row.cod_fab || null,
-        existencia: parseFloat(row.existencia) || 0,
-        descripcion: row.descripcion,
-        cunidad: row.cunidad || null,
-        id_alm: row.id_alm,
-        id_marca: row.id_marca || null,
-        id_categoria: row.id_categoria || null,
-        serie_lote: row.serie_lote || '-',
-        vcto: row.vcto || null,
-        maneja_serie_lote: row.maneja_serie_lote === 'true' || row.maneja_serie_lote === '1',
-      }));
+      const skipped = [];
+      const planillas = [];
+      parsedData.forEach((row, i) => {
+        const rowNum = i + 2;
+        const errors = [];
+        if (!row.codigo || !row.codigo.trim()) errors.push('codigo vacio');
+        if (!row.descripcion || !row.descripcion.trim()) errors.push('descripcion vacia');
+        if (!row.id_alm || !row.id_alm.trim()) errors.push('id_alm vacio');
+        if (row.cunidad && row.cunidad.trim().length > 20) errors.push(`cunidad "${row.cunidad.trim()}" excede 20 chars (${row.cunidad.trim().length})`);
+
+        if (errors.length > 0) {
+          skipped.push({ row: rowNum, errors });
+          return;
+        }
+
+        planillas.push({
+          codigo: row.codigo,
+          cod_fab: row.cod_fab || null,
+          existencia: parseFloat(row.existencia) || 0,
+          descripcion: row.descripcion,
+          cunidad: row.cunidad ? row.cunidad.trim() : null,
+          id_alm: row.id_alm,
+          id_marca: row.id_marca || null,
+          id_categoria: row.id_categoria || null,
+          serie_lote: row.serie_lote || '-',
+          vcto: row.vcto || null,
+          maneja_serie_lote: row.maneja_serie_lote === 'true' || row.maneja_serie_lote === '1',
+        });
+      });
+
+      if (planillas.length === 0) {
+        showResult(document.getElementById('p-result'), { message: 'No hay registros validos para cargar' }, 'error');
+        return;
+      }
+
+      if (skipped.length > 0) {
+        console.warn('[Cargas] Filas omitidas:', skipped);
+      }
 
       console.log('[Cargas] Uploading planillas:', planillas.length, 'barrido:', selectedBarrido.nombre);
       const result = await planillasService.bulkCreate(selectedBarrido.nombre, planillas);
       console.log('[Cargas] Planillas uploaded:', result);
-      showResult(document.getElementById('p-result'), result, 'success');
+      const msg = skipped.length > 0 ? `Cargados ${result.inserted || 0}. Filas omitidas (${skipped.length}): ${skipped.slice(0, 5).map(s => `F${s.row}: ${s.errors.join(', ')}`).join(' | ')}${skipped.length > 5 ? '...' : ''}` : undefined;
+      showResult(document.getElementById('p-result'), { ...result, message: msg }, 'success');
       parsedData = null;
       document.getElementById('p-preview').style.display = 'none';
       document.getElementById('p-file').value = '';
     } catch (err) {
-      console.error('[Cargas] Planillas upload failed:', err.message);
+      console.error('[Cargas] Planillas upload failed:', err.message, err.details);
       showResult(document.getElementById('p-result'), err, 'error');
     } finally {
       btn.disabled = false;

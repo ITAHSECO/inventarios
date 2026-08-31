@@ -75,9 +75,9 @@ class PlanillasController {
     }
   }
 
-  async getConteosByPlanilla(req, res, next) {
+  async getConteosByBarrido(req, res, next) {
     try {
-      const conteos = await planillasService.getConteosByPlanilla(req.validated.params.id);
+      const conteos = await planillasService.getConteosByBarrido(req.validated.params.id);
       return success(res, conteos);
     } catch (error) {
       next(error);

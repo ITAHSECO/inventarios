@@ -116,8 +116,8 @@ router.get('/:id', validate(planillaIdParam), planillasController.getById);
  * /planillas/{id}/conteos:
  *   get:
  *     tags: [Planillas]
- *     summary: Obtener conteos de una planilla
- *     description: Retorna todos los conteos capturados para una planilla específica.
+ *     summary: Obtener conteos de un barrido
+ *     description: Retorna todos los conteos capturados para un barrido específico.
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -130,7 +130,7 @@ router.get('/:id', validate(planillaIdParam), planillasController.getById);
  *       200:
  *         description: Lista de conteos
  */
-router.get('/:id/conteos', validate(planillaIdParam), planillasController.getConteosByPlanilla);
+router.get('/:id/conteos', validate(planillaIdParam), planillasController.getConteosByBarrido);
 
 /**
  * @swagger

@@ -117,11 +117,11 @@ class PlanillasService {
     return almacenes;
   }
 
-  async getConteosByPlanilla(planillaId) {
+  async getConteosByBarrido(barridoId) {
     const { data, error } = await supabaseAdmin
       .from('captura_inventario_conteos')
       .select('*')
-      .eq('planilla_id', planillaId)
+      .eq('barrido_id', barridoId)
       .order('created_at', { ascending: false });
 
     if (error) throw ApiError.internal(error.message);
