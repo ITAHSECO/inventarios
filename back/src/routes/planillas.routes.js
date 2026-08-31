@@ -202,7 +202,7 @@ router.post('/bulk', requireRole('superadmin', 'admin'), validate(bulkCreatePlan
  *             properties:
  *               existencia:
  *                 type: number
- *               articulo:
+ *               descripcion:
  *                 type: string
  *               maneja_serie_lote:
  *                 type: boolean

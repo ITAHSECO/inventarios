@@ -46,7 +46,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `codigo` (VARCHAR(50), NOT NULL)
 - `cod_fab` (VARCHAR(50), NULL)
 - `existencia` (NUMERIC(12, 4), DEFAULT 0) -> Stock teórico
-- `articulo` (VARCHAR(255), NOT NULL)
+- `descripcion` (VARCHAR(255), NOT NULL)
 - `cunidad` (VARCHAR(20), NULL)
 - `serie_lote` (VARCHAR(100), DEFAULT '-')
 - `vcto` (DATE, NULL)
@@ -58,8 +58,10 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `planilla_id` (BIGINT, FK `public.planillasInventario.id`, RESTRICT, NOT NULL)
 - `barrido` (VARCHAR(100), NOT NULL)
 - `codigo` (VARCHAR(50), NOT NULL)
+- `descripcion` (VARCHAR(255), NULL) -> Descripcion del articulo al momento del conteo
 - `ubicacion` (VARCHAR(100), NOT NULL)
 - `conteo` (NUMERIC(12, 4), CHECK >= 0, NOT NULL)
+- `cunidad` (VARCHAR(20), NULL) -> Unidad de medida
 - `serie_lote` (VARCHAR(100), DEFAULT '-', NOT NULL)
 - `vcto_capturado` (DATE, NULL)
 - `modificado_por_supervisor` (BOOLEAN, DEFAULT FALSE, NOT NULL)

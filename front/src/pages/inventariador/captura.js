@@ -1,7 +1,9 @@
 import { planillasService } from '../../services/planillas.service.js';
+import { catalogosService } from '../../services/catalogos.service.js';
 import { conteosService } from '../../services/conteos.service.js';
 
 let barridos = [];
+let unidades = [];
 let selectedPlanilla = null;
 let currentPage = 1;
 let currentBarrido = '';
@@ -15,9 +17,13 @@ export async function renderCaptura(container) {
   const user = getUser();
 
   try {
-    const res = await planillasService.getBarridos();
-    barridos = res.data || [];
-  } catch { barridos = []; }
+    const [barridosRes, unidadesRes] = await Promise.all([
+      planillasService.getBarridos(),
+      catalogosService.getActivos('UNIDAD'),
+    ]);
+    barridos = barridosRes.data || [];
+    unidades = unidadesRes.data || [];
+  } catch { barridos = []; unidades = []; }
 
   container.innerHTML = `
     <div class="dashboard">
@@ -49,7 +55,7 @@ export async function renderCaptura(container) {
         <div class="capture-section" id="planillasSection" style="display:none;">
           <h2 class="section-title">2. Seleccionar Articulo</h2>
           <div class="filters-bar">
-            <input type="text" id="searchPlanilla" class="filter-input" placeholder="Buscar por codigo o articulo...">
+            <input type="text" id="searchPlanilla" class="filter-input" placeholder="Buscar por codigo o descripcion...">
           </div>
           <div id="planillasTable" class="table-container"></div>
           <div id="planillasPagination" class="pagination"></div>
@@ -59,34 +65,51 @@ export async function renderCaptura(container) {
           <h2 class="section-title">3. Registrar Conteo</h2>
           <div id="selectedInfo" class="selected-info"></div>
           <form id="captureForm" novalidate>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="f_codigo">Codigo</label>
+                <input type="text" id="f_codigo" class="input-disabled" readonly>
+              </div>
+              <div class="form-group">
+                <label for="f_unidad">Unidad *</label>
+                <select id="f_unidad" required>
+                  <option value="">Seleccione...</option>
+                  ${unidades.map(u => `<option value="${u.descripcion}">${u.descripcion}</option>`).join('')}
+                </select>
+              </div>
+            </div>
             <div class="form-group">
-              <label for="f_ubicacion">Ubicacion *</label>
-              <input type="text" id="f_ubicacion" required maxlength="100" placeholder="Ej: ESTANTE-A1">
+              <label for="f_descripcion">Descripcion</label>
+              <input type="text" id="f_descripcion" class="input-disabled" readonly>
             </div>
             <div class="form-row">
+              <div class="form-group">
+                <label for="f_ubicacion">Ubicacion *</label>
+                <input type="text" id="f_ubicacion" required maxlength="100" placeholder="Ej: ESTANTE-A1">
+              </div>
               <div class="form-group">
                 <label for="f_conteo">Conteo *</label>
                 <input type="number" id="f_conteo" required min="0" step="0.0001" placeholder="0">
               </div>
-              <div class="form-group" id="serieLoteGroup" style="display:none;">
-                <label for="f_serie_lote">Serie/Lote *</label>
-                <input type="text" id="f_serie_lote" maxlength="100" placeholder="Serie o lote">
-              </div>
             </div>
             <div class="form-row">
+              <div class="form-group" id="serieLoteGroup" style="display:none;">
+                <label for="f_serie_lote">Lote/Serie</label>
+                <input type="text" id="f_serie_lote" maxlength="100" placeholder="Serie o lote">
+              </div>
               <div class="form-group">
                 <label for="f_vcto">Vencimiento</label>
                 <input type="date" id="f_vcto">
               </div>
-              <div class="form-group">
-                <label for="f_observacion">Observacion</label>
-                <input type="text" id="f_observacion" maxlength="255" placeholder="Opcional">
-              </div>
+            </div>
+            <div class="form-group">
+              <label for="f_observacion">Nota</label>
+              <input type="text" id="f_observacion" maxlength="255" placeholder="Opcional">
             </div>
             <div id="formError" class="form-error" style="display:none;"></div>
             <div id="formSuccess" class="form-success" style="display:none;"></div>
             <div style="display:flex;gap:0.5rem;">
-              <button type="submit" class="btn btn-primary" id="submitBtn">Registrar Conteo</button>
+              <button type="submit" class="btn btn-primary" id="submitBtn">Registrar</button>
               <button type="button" class="btn btn-outline" id="cancelBtn">Cancelar</button>
             </div>
           </form>
@@ -160,7 +183,7 @@ async function loadPlanillas() {
         <thead>
           <tr>
             <th>Codigo</th>
-            <th>Articulo</th>
+            <th>Descripcion</th>
             <th>Almacen</th>
             <th>Existencia</th>
             <th>Accion</th>
@@ -170,7 +193,7 @@ async function loadPlanillas() {
           ${data.map(p => `
             <tr>
               <td>${p.codigo}</td>
-              <td>${p.articulo}</td>
+              <td>${p.descripcion}</td>
               <td>${p.id_alm}</td>
               <td>${p.existencia}</td>
               <td>
@@ -206,12 +229,15 @@ function showCaptureForm(planilla) {
 
   document.getElementById('selectedInfo').innerHTML = `
     <div class="selected-card">
-      <strong>${planilla.codigo}</strong> - ${planilla.articulo}<br>
+      <strong>${planilla.codigo}</strong> - ${planilla.descripcion}<br>
       <small>Almacen: ${planilla.id_alm} | Existencia: ${planilla.existencia} | Barrido: ${planilla.barrido}</small>
       ${planilla.serie_lote && planilla.serie_lote !== '-' ? `<br><small>Serie/Lote: ${planilla.serie_lote}</small>` : ''}
       ${planilla.vcto ? `<br><small>Vence: ${planilla.vcto}</small>` : ''}
     </div>
   `;
+
+  document.getElementById('f_codigo').value = planilla.codigo || '';
+  document.getElementById('f_descripcion').value = planilla.descripcion || '';
 
   const serieLoteGroup = document.getElementById('serieLoteGroup');
   if (planilla.maneja_serie_lote) {
@@ -222,6 +248,7 @@ function showCaptureForm(planilla) {
     document.getElementById('f_serie_lote').required = false;
   }
 
+  document.getElementById('f_unidad').value = planilla.cunidad || '';
   document.getElementById('f_ubicacion').value = '';
   document.getElementById('f_conteo').value = '';
   document.getElementById('f_serie_lote').value = planilla.serie_lote || '';
@@ -249,8 +276,10 @@ async function handleCaptureSubmit(e) {
 
   const data = {
     planilla_id: selectedPlanilla.id,
+    descripcion: selectedPlanilla.descripcion || null,
     ubicacion: document.getElementById('f_ubicacion').value.trim(),
     conteo: parseFloat(document.getElementById('f_conteo').value),
+    cunidad: document.getElementById('f_unidad').value,
     serie_lote: document.getElementById('f_serie_lote').value.trim() || '-',
     vcto_capturado: document.getElementById('f_vcto').value || null,
     observacion: document.getElementById('f_observacion').value.trim() || null,
@@ -263,6 +292,11 @@ async function handleCaptureSubmit(e) {
   }
   if (isNaN(data.conteo) || data.conteo < 0) {
     errorDiv.textContent = 'El conteo debe ser un numero mayor o igual a 0';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  if (!data.cunidad) {
+    errorDiv.textContent = 'La unidad es requerida';
     errorDiv.style.display = 'block';
     return;
   }
@@ -307,8 +341,10 @@ async function loadMyCounts() {
         <thead>
           <tr>
             <th>Codigo</th>
+            <th>Descripcion</th>
             <th>Ubicacion</th>
             <th>Conteo</th>
+            <th>Unidad</th>
             <th>Fecha</th>
           </tr>
         </thead>
@@ -316,8 +352,10 @@ async function loadMyCounts() {
           ${data.map(c => `
             <tr>
               <td>${c.codigo}</td>
+              <td>${c.descripcion || ''}</td>
               <td>${c.ubicacion}</td>
               <td>${c.conteo}</td>
+              <td>${c.cunidad || ''}</td>
               <td>${new Date(c.created_at).toLocaleDateString()}</td>
             </tr>
           `).join('')}

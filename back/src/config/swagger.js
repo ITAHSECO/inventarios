@@ -69,7 +69,7 @@ const options = {
             codigo: { type: 'string', example: 'ART001' },
             cod_fab: { type: 'string', nullable: true },
             existencia: { type: 'number', example: 100 },
-            articulo: { type: 'string', example: 'Articulo de Prueba' },
+            descripcion: { type: 'string', example: 'Descripcion del Articulo' },
             cunidad: { type: 'string', nullable: true },
             serie_lote: { type: 'string', default: '-' },
             vcto: { type: 'string', format: 'date', nullable: true },

@@ -3,8 +3,10 @@ const { z } = require('zod');
 const createConteoSchema = z.object({
   body: z.object({
     planilla_id: z.coerce.number().int().positive(),
+    descripcion: z.string().max(255).optional().nullable(),
     ubicacion: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()),
     conteo: z.coerce.number().min(0),
+    cunidad: z.string().min(1).max(20).transform((v) => v.toUpperCase().trim()),
     serie_lote: z.string().max(100).default('-').transform((v) => v.toUpperCase().trim()),
     vcto_capturado: z.string().optional().nullable(),
     observacion: z.string().max(255).optional().nullable(),
@@ -15,8 +17,10 @@ const bulkConteoSchema = z.object({
   body: z.object({
     capturas: z.array(z.object({
       planilla_id: z.coerce.number().int().positive(),
+      descripcion: z.string().max(255).optional().nullable(),
       ubicacion: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()),
       conteo: z.coerce.number().min(0),
+      cunidad: z.string().min(1).max(20).transform((v) => v.toUpperCase().trim()),
       serie_lote: z.string().max(100).default('-').transform((v) => v.toUpperCase().trim()),
       vcto_capturado: z.string().optional().nullable(),
       observacion: z.string().max(255).optional().nullable(),

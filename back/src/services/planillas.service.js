@@ -9,7 +9,7 @@ class PlanillasService {
     if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
     if (id_alm) query = query.eq('id_alm', id_alm.toUpperCase().trim());
     if (search) {
-      query = query.or(`codigo.ilike.%${search}%,articulo.ilike.%${search}%,cod_fab.ilike.%${search}%`);
+      query = query.or(`codigo.ilike.%${search}%,descripcion.ilike.%${search}%,cod_fab.ilike.%${search}%`);
     }
 
     const from = (page - 1) * limit;
@@ -56,7 +56,7 @@ class PlanillasService {
       codigo: p.codigo ? p.codigo.toUpperCase().trim() : null,
       cod_fab: p.cod_fab || null,
       existencia: p.existencia || 0,
-      articulo: p.articulo || null,
+      descripcion: p.descripcion || null,
       cunidad: p.cunidad || null,
       serie_lote: p.serie_lote || '-',
       vcto: p.vcto || null,

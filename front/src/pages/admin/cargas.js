@@ -6,7 +6,7 @@ import { parseCSVFile, rowsToObjects } from '../../utils/csv.js';
 
 const USUARIOS_HEADERS = ['email', 'password', 'username', 'nombres', 'apellidos', 'rol'];
 const CATALOGOS_HEADERS = ['id_tabla', 'id_elemento', 'descripcion', 'activo'];
-const PLANILLAS_HEADERS = ['codigo', 'cod_fab', 'existencia', 'articulo', 'cunidad', 'id_alm', 'id_marca', 'id_categoria', 'serie_lote', 'vcto', 'maneja_serie_lote'];
+const PLANILLAS_HEADERS = ['codigo', 'cod_fab', 'existencia', 'descripcion', 'cunidad', 'id_alm', 'id_marca', 'id_categoria', 'serie_lote', 'vcto', 'maneja_serie_lote'];
 
 export async function renderCargas(container) {
   container.innerHTML = `
@@ -70,7 +70,7 @@ export async function renderCargas(container) {
       <div id="tab-planilla" class="tab-content">
         <div class="carga-panel">
           <h2>Carga Masiva de Planilla de Inventario</h2>
-          <p class="carga-hint">CSV con columnas: <code>codigo, cod_fab, existencia, articulo, cunidad, id_alm, id_marca, id_categoria, serie_lote, vcto, maneja_serie_lote</code></p>
+          <p class="carga-hint">CSV con columnas: <code>codigo, cod_fab, existencia, descripcion, cunidad, id_alm, id_marca, id_categoria, serie_lote, vcto, maneja_serie_lote</code></p>
 
           <div class="form-group">
             <label for="p-barrido">Barrido destino</label>
@@ -398,7 +398,7 @@ async function initPlanilla() {
         codigo: row.codigo,
         cod_fab: row.cod_fab || null,
         existencia: parseFloat(row.existencia) || 0,
-        articulo: row.articulo,
+        descripcion: row.descripcion,
         cunidad: row.cunidad || null,
         id_alm: row.id_alm,
         id_marca: row.id_marca || null,
