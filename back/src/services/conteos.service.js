@@ -1,14 +1,14 @@
 const { supabaseAdmin } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 class ConteosService {
-  async list({ page, limit, barrido, codigo, inventariador_id, planilla_id, search }) {
+  async list({ page, limit, barrido, codigo, inventariador_id, search }) {
     let query = supabaseAdmin.from('captura_inventario_conteos').select('*', { count: 'exact' });
 
     if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
     if (codigo) query = query.eq('codigo', codigo.toUpperCase().trim());
     if (inventariador_id) query = query.eq('inventariador_id', inventariador_id);
-    if (planilla_id) query = query.eq('planilla_id', planilla_id);
     if (search) {
       query = query.or(`codigo.ilike.%${search}%,ubicacion.ilike.%${search}%,serie_lote.ilike.%${search}%`);
     }
@@ -36,37 +36,17 @@ class ConteosService {
   }
 
   async create(conteo, userId) {
-    let barrido = conteo.barrido;
-    let codigo = conteo.codigo;
-    let descripcion = conteo.descripcion || null;
-
-    if (conteo.planilla_id) {
-      const planilla = await this._getPlanilla(conteo.planilla_id);
-      barrido = planilla.barrido;
-      codigo = planilla.codigo;
-      descripcion = descripcion || planilla.descripcion || null;
-
-      if (planilla.maneja_serie_lote) {
-        if (!conteo.serie_lote || conteo.serie_lote === '-' || conteo.serie_lote.trim() === '') {
-          throw ApiError.badRequest(
-            'El articulo maneja serie/lote y requiere un valor valido (no vacio ni "-")'
-          );
-        }
-      }
-    }
-
-    if (!barrido || !codigo) {
-      throw ApiError.badRequest('Se requiere planilla_id o barrido + codigo');
+    if (!conteo.barrido || !conteo.codigo) {
+      throw ApiError.badRequest('Se requiere barrido + codigo');
     }
 
     const { data, error } = await supabaseAdmin
       .from('captura_inventario_conteos')
       .insert({
-        planilla_id: conteo.planilla_id || null,
         barrido_id: conteo.barrido_id || null,
-        barrido,
-        codigo,
-        descripcion,
+        barrido: conteo.barrido,
+        codigo: conteo.codigo,
+        descripcion: conteo.descripcion || null,
         ubicacion: conteo.ubicacion,
         conteo: conteo.conteo,
         cunidad: conteo.cunidad || null,
@@ -87,30 +67,8 @@ class ConteosService {
 
     for (const captura of capturas) {
       try {
-        let barrido = captura.barrido;
-        let codigo = captura.codigo;
-        let descripcion = captura.descripcion || null;
-
-        if (captura.planilla_id) {
-          const planilla = await this._getPlanilla(captura.planilla_id);
-          barrido = planilla.barrido;
-          codigo = planilla.codigo;
-          descripcion = descripcion || planilla.descripcion || null;
-
-          if (planilla.maneja_serie_lote) {
-            if (!captura.serie_lote || captura.serie_lote === '-' || captura.serie_lote.trim() === '') {
-              results.errors.push({
-                planilla_id: captura.planilla_id,
-                error: 'Serie/lote requerido',
-              });
-              results.skipped++;
-              continue;
-            }
-          }
-        }
-
-        if (!barrido || !codigo) {
-          results.errors.push({ planilla_id: captura.planilla_id || null, error: 'Se requiere planilla_id o barrido + codigo' });
+        if (!captura.barrido || !captura.codigo) {
+          results.errors.push({ error: 'Se requiere barrido + codigo' });
           results.skipped++;
           continue;
         }
@@ -118,11 +76,10 @@ class ConteosService {
         const { error } = await supabaseAdmin
           .from('captura_inventario_conteos')
           .insert({
-            planilla_id: captura.planilla_id || null,
             barrido_id: captura.barrido_id || null,
-            barrido,
-            codigo,
-            descripcion,
+            barrido: captura.barrido,
+            codigo: captura.codigo,
+            descripcion: captura.descripcion || null,
             ubicacion: captura.ubicacion,
             conteo: captura.conteo,
             cunidad: captura.cunidad || null,
@@ -133,13 +90,13 @@ class ConteosService {
           });
 
         if (error) {
-          results.errors.push({ planilla_id: captura.planilla_id || null, error: error.message });
+          results.errors.push({ error: error.message });
           results.skipped++;
         } else {
           results.inserted++;
         }
       } catch (err) {
-        results.errors.push({ planilla_id: captura.planilla_id || null, error: err.message });
+        results.errors.push({ error: err.message });
         results.skipped++;
       }
     }
@@ -209,17 +166,6 @@ class ConteosService {
 
     if (error) throw ApiError.internal(error.message);
     return { data, total: count };
-  }
-
-  async _getPlanilla(planillaId) {
-    const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
-      .select('*')
-      .eq('id', planillaId)
-      .single();
-
-    if (error || !data) throw ApiError.notFound('Planilla no encontrada');
-    return data;
   }
 }
 
