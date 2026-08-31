@@ -63,7 +63,7 @@ class ConteosService {
       .from('captura_inventario_conteos')
       .insert({
         planilla_id: conteo.planilla_id || null,
-        id_barrido: conteo.id_barrido || null,
+        barrido_id: conteo.barrido_id || null,
         barrido,
         codigo,
         descripcion,
@@ -119,7 +119,7 @@ class ConteosService {
           .from('captura_inventario_conteos')
           .insert({
             planilla_id: captura.planilla_id || null,
-            id_barrido: captura.id_barrido || null,
+            barrido_id: captura.barrido_id || null,
             barrido,
             codigo,
             descripcion,

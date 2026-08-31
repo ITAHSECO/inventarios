@@ -50,10 +50,24 @@ const listPlanillasSchema = z.object({
   }),
 });
 
+const bulkPlanillaItemSchema = z.object({
+  id_alm: z.string().min(1).max(50).transform((v) => v.toUpperCase().trim()),
+  id_marca: z.string().max(50).transform((v) => v.toUpperCase().trim()).optional().nullable(),
+  id_categoria: z.string().max(50).transform((v) => v.toUpperCase().trim()).optional().nullable(),
+  codigo: z.string().min(1).max(50).transform((v) => v.toUpperCase().trim()),
+  cod_fab: z.string().max(50).optional().nullable(),
+  existencia: z.coerce.number().min(0).default(0),
+  descripcion: z.string().min(1).max(255),
+  cunidad: z.string().max(20).optional().nullable(),
+  serie_lote: z.string().max(100).default('-'),
+  vcto: z.string().optional().nullable(),
+  maneja_serie_lote: z.boolean().default(false),
+});
+
 const bulkCreatePlanillaSchema = z.object({
   body: z.object({
     barrido: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()),
-    planillas: z.array(createPlanillaSchema.shape.body).min(1, 'Debe incluir al menos una planilla'),
+    planillas: z.array(bulkPlanillaItemSchema).min(1, 'Debe incluir al menos una planilla'),
   }),
 });
 

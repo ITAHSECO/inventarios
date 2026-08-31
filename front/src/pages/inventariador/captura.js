@@ -312,7 +312,7 @@ async function handleCaptureSubmit(e) {
   try {
     const data = {
       planilla_id: null,
-      id_barrido: currentBarridoId,
+      barrido_id: currentBarridoId,
       barrido: currentBarrido,
       codigo,
       descripcion: descripcion || null,
