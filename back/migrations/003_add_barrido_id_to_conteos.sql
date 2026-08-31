@@ -1,7 +1,4 @@
--- Migracion: Limpiar foreign keys en captura_inventario_conteos
--- 1. Eliminar id_barrido (duplicado)
--- 2. Asegurar barrido_id como FK a barridos
--- 3. Eliminar planilla_id
+-- Migracion 003: Limpiar FKs en captura_inventario_conteos + ampliar cunidad
 
 DO $$
 BEGIN
@@ -18,5 +15,14 @@ BEGIN
   -- Asegurar que barrido_id existe
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captura_inventario_conteos' AND column_name = 'barrido_id') THEN
     ALTER TABLE public.captura_inventario_conteos ADD COLUMN barrido_id BIGINT REFERENCES public.barridos(id) ON DELETE SET NULL;
+  END IF;
+
+  -- Ampliar cunidad a 50 chars en ambas tablas
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'captura_inventario_conteos' AND column_name = 'cunidad' AND character_maximum_length < 50) THEN
+    ALTER TABLE public.captura_inventario_conteos ALTER COLUMN cunidad TYPE VARCHAR(50);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'planillasinventario' AND column_name = 'cunidad' AND character_maximum_length < 50) THEN
+    ALTER TABLE public.planillasinventario ALTER COLUMN cunidad TYPE VARCHAR(50);
   END IF;
 END $$;
