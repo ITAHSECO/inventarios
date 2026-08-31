@@ -30,7 +30,7 @@ class ReportesService {
     if (conteosError) throw ApiError.internal(conteosError.message);
 
     const { data: planillas, error: planillasError } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .select('id, existencia, barrido, id_alm');
 
     if (planillasError) throw ApiError.internal(planillasError.message);

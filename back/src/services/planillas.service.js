@@ -4,7 +4,7 @@ const logger = require('../utils/logger');
 
 class PlanillasService {
   async list({ page, limit, barrido, id_alm, search }) {
-    let query = supabaseAdmin.from('planillasInventario').select('*', { count: 'exact' });
+    let query = supabaseAdmin.from('planillasinventario').select('*', { count: 'exact' });
 
     if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
     if (id_alm) query = query.eq('id_alm', id_alm.toUpperCase().trim());
@@ -26,7 +26,7 @@ class PlanillasService {
 
   async getById(id) {
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .select('*')
       .eq('id', id)
       .single();
@@ -37,7 +37,7 @@ class PlanillasService {
 
   async create(planilla) {
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .insert(planilla)
       .select()
       .single();
@@ -64,7 +64,7 @@ class PlanillasService {
     }));
 
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .insert(rows)
       .select();
 
@@ -75,7 +75,7 @@ class PlanillasService {
 
   async update(id, updates) {
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .update(updates)
       .eq('id', id)
       .select()
@@ -88,7 +88,7 @@ class PlanillasService {
 
   async delete(id) {
     const { error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .delete()
       .eq('id', id);
 
@@ -97,7 +97,7 @@ class PlanillasService {
 
   async getBarridos() {
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .select('barrido')
       .not('barrido', 'is', null);
 
@@ -108,7 +108,7 @@ class PlanillasService {
 
   async getAlmacenes() {
     const { data, error } = await supabaseAdmin
-      .from('planillasInventario')
+      .from('planillasinventario')
       .select('id_alm')
       .not('id_alm', 'is', null);
 
