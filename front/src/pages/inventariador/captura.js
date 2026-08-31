@@ -1,6 +1,7 @@
 import { barridosService } from '../../services/barridos.service.js';
 import { catalogosService } from '../../services/catalogos.service.js';
 import { conteosService } from '../../services/conteos.service.js';
+import { planillasService } from '../../services/planillas.service.js';
 
 let barridos = [];
 let unidades = [];
@@ -16,7 +17,7 @@ export async function renderCaptura(container) {
 
   try {
     const [barridosRes, unidadesRes] = await Promise.all([
-      barridosService.list({ limit: 100, estado: 'activo' }),
+      barridosService.getMisBarridos(),
       catalogosService.getActivos('UNIDAD'),
     ]);
     barridos = barridosRes.data || [];

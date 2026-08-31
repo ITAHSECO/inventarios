@@ -137,11 +137,12 @@ class BarridosService {
       .select(`
         barridos:barrido_id (id, nombre, estado, fecha_inicio, fecha_fin)
       `)
-      .eq('usuario_id', usuarioId)
-      .eq('barridos.estado', 'activo');
+      .eq('usuario_id', usuarioId);
 
     if (error) throw ApiError.internal(error.message);
-    return data.map(r => r.barridos).filter(Boolean);
+    return data
+      .map(r => r.barridos)
+      .filter(b => b && b.estado === 'activo');
   }
 
   async getInventariadores() {
