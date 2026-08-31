@@ -80,7 +80,7 @@ router.get('/mis-conteos', conteosController.getMisConteos);
  *           type: string
  *           format: uuid
  *       - in: query
- *         name: planilla_id
+ *         name: barrido_id
  *         schema:
  *           type: integer
  *       - in: query
@@ -127,6 +127,8 @@ router.get('/:id', validate(conteoIdParam), conteosController.getById);
  *     summary: Crear conteo (captura de campo)
  *     description: |
  *       Crea un nuevo conteo de inventario. El inventariador_id se asigna automáticamente del token JWT.
+ *       Se envía barrido (nombre), barrido_id (FK) y codigo (código del artículo).
+ *       El backend valida que la combinación barrido+codigo exista en planillasinventario.
  *       Si el artículo maneja serie/lote, el campo serie_lote es obligatorio.
  *     security:
  *       - bearerAuth: []
@@ -136,11 +138,17 @@ router.get('/:id', validate(conteoIdParam), conteosController.getById);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [planilla_id, ubicacion, conteo]
+ *             required: [ubicacion, conteo]
  *             properties:
- *               planilla_id:
+ *               barrido_id:
  *                 type: integer
- *                 description: ID de la planilla asociada
+ *                 description: ID del barrido activo
+ *               barrido:
+ *                 type: string
+ *                 description: Nombre del barrido
+ *               codigo:
+ *                 type: string
+ *                 description: Código del artículo
  *               ubicacion:
  *                 type: string
  *                 example: ESTANTE-01
@@ -148,6 +156,8 @@ router.get('/:id', validate(conteoIdParam), conteosController.getById);
  *                 type: number
  *                 minimum: 0
  *                 example: 50
+ *               cunidad:
+ *                 type: string
  *               serie_lote:
  *                 type: string
  *                 default: "-"
@@ -190,12 +200,18 @@ router.post('/', requireRole('inventariador', 'admin', 'superadmin'), validate(c
  *                 items:
  *                   type: object
  *                   properties:
- *                     planilla_id:
+ *                     barrido:
+ *                       type: string
+ *                     barrido_id:
  *                       type: integer
+ *                     codigo:
+ *                       type: string
  *                     ubicacion:
  *                       type: string
  *                     conteo:
  *                       type: number
+ *                     cunidad:
+ *                       type: string
  *                     serie_lote:
  *                       type: string
  *                     client_capture_id:

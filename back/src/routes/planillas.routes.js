@@ -117,7 +117,7 @@ router.get('/:id', validate(planillaIdParam), planillasController.getById);
  *   get:
  *     tags: [Planillas]
  *     summary: Obtener conteos de un barrido
- *     description: Retorna todos los conteos capturados para un barrido específico.
+ *     description: Retorna todos los conteos capturados para un barrido específico (query por barrido_id).
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -168,11 +168,30 @@ router.post('/', requireRole('superadmin', 'admin'), validate(createPlanillaSche
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [barrido, planillas]
  *             properties:
+ *               barrido:
+ *                 type: string
+ *                 description: Código de barrido (una sola vez para todos los items)
  *               planillas:
  *                 type: array
  *                 items:
- *                   $ref: '#/components/schemas/Planilla'
+ *                   type: object
+ *                   properties:
+ *                     id_alm:
+ *                       type: string
+ *                     codigo:
+ *                       type: string
+ *                     descripcion:
+ *                       type: string
+ *                     existencia:
+ *                       type: number
+ *                     cunidad:
+ *                       type: string
+ *                     serie_lote:
+ *                       type: string
+ *                     maneja_serie_lote:
+ *                       type: boolean
  *     responses:
  *       201:
  *         description: Planillas insertadas

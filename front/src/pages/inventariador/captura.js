@@ -63,7 +63,8 @@ export async function renderCaptura(container) {
             <div class="form-row">
               <div class="form-group">
                 <label for="f_codigo">Codigo</label>
-                <input type="text" id="f_codigo" maxlength="50" placeholder="Buscar por codigo o cod.fab...">
+                <input type="text" id="f_codigo" maxlength="50" placeholder="Buscar por codigo o cod.fab..." list="codigo-options">
+                <datalist id="codigo-options"></datalist>
                 <small id="codigoStatus" class="field-hint"></small>
               </div>
               <div class="form-group">
@@ -187,6 +188,7 @@ async function searchCodigo(codigo) {
   const statusEl = document.getElementById('codigoStatus');
   const descInput = document.getElementById('f_descripcion');
   const unidadSelect = document.getElementById('f_unidad');
+  const datalist = document.getElementById('codigo-options');
 
   try {
     const result = await planillasService.list({ barrido: currentBarrido, search: codigo, limit: 10 });
@@ -197,6 +199,8 @@ async function searchCodigo(codigo) {
     const match = exactCodigo || exactFab || matches[0];
 
     if (match && (exactCodigo || exactFab || matches.length === 1)) {
+      datalist.innerHTML = '';
+      document.getElementById('f_codigo').value = match.codigo;
       descInput.value = match.descripcion || '';
       descInput.readOnly = true;
       descInput.classList.add('input-disabled');
@@ -220,13 +224,18 @@ async function searchCodigo(codigo) {
       statusEl.textContent = `Encontrado: ${match.codigo} - ${match.descripcion}`;
       statusEl.className = 'field-hint field-hint-ok';
     } else if (matches.length > 1) {
-      statusEl.textContent = `${matches.length} coincidencias. Seleccione una opcion o escriba mas caracteres.`;
+      datalist.innerHTML = matches.map(p => {
+        const label = p.codigo + (p.cod_fab ? ` (${p.cod_fab})` : '') + ' - ' + (p.descripcion || '');
+        return `<option value="${p.codigo}" label="${label}">`;
+      }).join('');
+      statusEl.textContent = `${matches.length} coincidencias. Escriba o seleccione una opcion.`;
       statusEl.className = 'field-hint field-hint-warn';
       descInput.value = '';
       descInput.readOnly = false;
       descInput.classList.remove('input-disabled');
       clearSerieLote();
     } else {
+      datalist.innerHTML = '';
       statusEl.textContent = 'Codigo no encontrado. Escriba la descripcion manualmente.';
       statusEl.className = 'field-hint field-hint-warn';
       descInput.value = '';
@@ -236,6 +245,7 @@ async function searchCodigo(codigo) {
     }
   } catch (err) {
     console.error('[Captura] Search failed:', err.message);
+    datalist.innerHTML = '';
     statusEl.textContent = 'Error al buscar. Escriba la descripcion manualmente.';
     statusEl.className = 'field-hint field-hint-warn';
     descInput.value = '';

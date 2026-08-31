@@ -164,24 +164,25 @@ router.post('/', requireRole('superadmin', 'admin'), validate(createCatalogoSche
  *         application/json:
  *           schema:
  *             type: object
- *             required: [catalogos]
+ *             required: [id_tabla, catalogos]
  *             properties:
+ *               id_tabla:
+ *                 type: string
+ *                 example: CUNIDAD
+ *                 description: Tipo de catálogo (se envía UNA vez, no por item)
  *               catalogos:
  *                 type: array
  *                 minItems: 1
  *                 items:
  *                   type: object
- *                   required: [id_tabla, id_elemento, descripcion]
+ *                   required: [id_elemento, descripcion]
  *                   properties:
- *                     id_tabla:
- *                       type: string
- *                       example: ALMACEN
  *                     id_elemento:
  *                       type: string
- *                       example: ALM001
+ *                       example: PZA
  *                     descripcion:
  *                       type: string
- *                       example: Almacen Principal
+ *                       example: Pieza
  *                     activo:
  *                       type: boolean
  *                       default: true

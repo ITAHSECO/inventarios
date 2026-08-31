@@ -30,7 +30,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 
 ### B. `public.maestra_parametros` (Catálogos Centralizados)
 - `id` (BIGINT, GENERATED ALWAYS AS IDENTITY, PK)
-- `id_tabla` (VARCHAR(50), NOT NULL) -> Ej. 'ALMACEN', 'MARCA', 'CATEGORIA'
+- `id_tabla` (VARCHAR(50), NOT NULL) -> Ej. 'ALMACEN', 'MARCA', 'CATEGORIA', 'CUNIDAD'
 - `id_elemento` (VARCHAR(50), NOT NULL)
 - `descripcion` (VARCHAR(255), NOT NULL)
 - `activo` (BOOLEAN, DEFAULT TRUE, NOT NULL)
@@ -38,7 +38,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `fecha_creacion`, `fecha_modificacion` (TIMESTAMPTZ)
 *Constraint UNIQUE:* `(id_tabla, id_elemento)`
 
-### C. `public.planillasInventario` (Catálogo Base / Snapshot de Barrido)
+### C. `public.planillasinventario` (Catálogo Base / Snapshot de Barrido)
 - `id` (BIGINT, GENERATED ALWAYS AS IDENTITY, PK)
 - `barrido` (VARCHAR(100), NOT NULL)
 - `id_alm` (VARCHAR(50), NOT NULL)
@@ -47,7 +47,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `cod_fab` (VARCHAR(50), NULL)
 - `existencia` (NUMERIC(12, 4), DEFAULT 0) -> Stock teórico
 - `descripcion` (VARCHAR(255), NOT NULL)
-- `cunidad` (VARCHAR(20), NULL)
+- `cunidad` (VARCHAR(50), NULL) -> Unidad de medida
 - `serie_lote` (VARCHAR(100), DEFAULT '-')
 - `vcto` (DATE, NULL)
 - `maneja_serie_lote` (BOOLEAN, DEFAULT FALSE)
@@ -55,13 +55,13 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 
 ### D. `public.captura_inventario_conteos` (Lecturas de Campo)
 - `id` (BIGINT, GENERATED ALWAYS AS IDENTITY, PK)
-- `planilla_id` (BIGINT, FK `public.planillasInventario.id`, RESTRICT, NULL) -> Opcional: se envia si el articulo existe en la planilla
-- `barrido` (VARCHAR(100), NOT NULL) -> Nombre del barrido activo
+- `barrido_id` (BIGINT, FK `public.barridos.id`, NULL) -> Referencia al barrido activo
+- `barrido` (VARCHAR(100), NOT NULL) -> Nombre del barrido activo (para referencia directa)
 - `codigo` (VARCHAR(50), NOT NULL) -> Codigo del articulo
 - `descripcion` (VARCHAR(255), NULL) -> Descripcion del articulo al momento del conteo
 - `ubicacion` (VARCHAR(100), NOT NULL) -> Ubicacion fisica del articulo
 - `conteo` (NUMERIC(12, 4), CHECK >= 0, NOT NULL) -> Cantidad contada
-- `cunidad` (VARCHAR(20), NULL) -> Unidad de medida
+- `cunidad` (VARCHAR(50), NULL) -> Unidad de medida
 - `serie_lote` (VARCHAR(100), DEFAULT '-', NOT NULL)
 - `vcto_capturado` (DATE, NULL)
 - `modificado_por_supervisor` (BOOLEAN, DEFAULT FALSE, NOT NULL)
@@ -92,7 +92,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 1. **Auto-Creación de Perfiles:**
    - Trigger `trg_on_auth_user_created` en `auth.users`: Al registrar un usuario, extrae `username`, `nombres`, `apellidos` y `rol` de `raw_user_meta_data` e inserta automáticamente en `public.perfiles`.
 2. **Validación de Serie/Lote:**
-   - Trigger `trg_conteos_validar_serie_lote` en `captura_inventario_conteos`: Consulta `planillasInventario.maneja_serie_lote`. Si es `TRUE`, rechaza la inserción/edición si el `serie_lote` capturado es vacío, nulo o '-'.
+   - Trigger `trg_conteos_validar_serie_lote` en `captura_inventario_conteos`: Consulta `planillasinventario.maneja_serie_lote`. Si es `TRUE`, rechaza la inserción/edición si el `serie_lote` capturado es vacío, nulo o '-'.
 3. **Normalización:**
    - Formateo a mayúsculas y eliminación de espacios en blanco (`UPPER(TRIM())`) para claves en maestra, ubicaciones y series/lotes.
 4. **Verificación de PIN Supervisor:**
@@ -105,7 +105,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 
 Se utiliza una función optimizada `SECURITY DEFINER` llamada `public.fn_obtener_rol_usuario()` para validar permisos sin generar recursión:
 - **`perfiles`:** Lectura para autenticados. Edición según rol/jerarquía.
-- **`maestra_parametros` y `planillasInventario`:** Lectura pública para autenticados. Inserción/Edición exclusiva para `superadmin` y `admin`.
+- **`maestra_parametros` y `planillasinventario`:** Lectura pública para autenticados. Inserción/Edición exclusiva para `superadmin` y `admin`.
 - **`captura_inventario_conteos`:**
   - `SELECT`: `superadmin`, `admin` y `reportes` ven todo. `inventariador` solo ve sus propios registros (`inventariador_id = auth.uid()`).
   - `INSERT`: Requiere que `inventariador_id = auth.uid()`.
@@ -119,17 +119,18 @@ Se utiliza una función optimizada `SECURITY DEFINER` llamada `public.fn_obtener
 ## 5. VISTAS DISPONIBLES
 - `public.vw_catalogos_activos`: Filtro directo de la tabla maestra.
 - `public.vw_resumen_diferencias_inventario`: Consolidado agregando conteos vs. stock teórico (`existencia`), clasificando automáticamente el estado (`EXACTO`, `SOBRANTE`, `FALTANTE`).
+  - **NOTA:** Esta vista puede estar rota si fue creada antes de la migración 003 (eliminación de `planilla_id`). Verificar que no haga referencia a columnas inexistentes.
 
 ---
 
-## 6 credenciales
--Project ID: mgapfghsthvkxgpslgic
--Project url: https://mgapfghsthvkxgpslgic.supabase.co
--Punishable API KEY: sb_publishable_PLynSBFi2-mmZ46z9soBbA_nK6uUN0M
--Secret Key: sb_secret_7gP3ZDj1cNZtLIk_kztowA_hh8Z9Uyn
--db: m4ximOabr1l524+
--anon public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTY2NzAsImV4cCI6MjA4MzQ3MjY3MH0.qdb8dbvjGmXDK1FPsk5pz4rdugpOla2cqyefAxSxQBY
--service role: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzg5NjY3MCwiZXhwIjoyMDgzNDcyNjcwfQ.kx7mH3YcaMl4vJr3pNmpwQ94f4LtLdHWslXIfcSmfW4
+## 6. CREDENCIALES
+- Project ID: mgapfghsthvkxgpslgic
+- Project url: https://mgapfghsthvkxgpslgic.supabase.co
+- Publishable API KEY: sb_publishable_PLynSBFi2-mmZ46z9soBbA_nK6uUN0M
+- Secret Key: sb_secret_7gP3ZDj1cNZtLIk_kztowA_hh8Z9Uyn
+- DB password: m4ximOabr1l524+
+- Anon public key: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTY2NzAsImV4cCI6MjA4MzQ3MjY3MH0.qdb8dbvjGmXDK1FPsk5pz4rdugpOla2cqyefAxSxQBY
+- Service role: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1nYXBmZ2hzdGh2a3hncHNsZ2ljIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Nzg5NjY3MCwiZXhwIjoyMDgzNDcyNjcwfQ.kx7mH3YcaMl4vJr3pNmpwQ94f4LtLdHWslXIfcSmfW4
 
 ---
 
@@ -151,6 +152,10 @@ back/
 ├── .env.example                  # Plantilla de variables
 ├── package.json                  # Dependencias y scripts
 ├── render.yaml                   # Config IaC para Render
+├── migrations/                   # Scripts SQL de migración
+│   ├── 001_full_schema.sql       # Schema completo inicial
+│   ├── 002_rename_articulo_to_descripcion.sql
+│   └── 003_add_barrido_id_to_conteos.sql  # barrido_id FK, drop planilla_id, widen cunidad
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -165,7 +170,14 @@ back/
     │   ├── validate.js           # Zod validation
     │   ├── errorHandler.js       # Error handler centralizado
     │   └── rateLimiter.js        # Rate limiting
-    ├── routes/                   # 6 grupos de rutas con JSDoc
+    ├── routes/                   # 7 grupos de rutas con JSDoc
+    │   ├── auth.routes.js
+    │   ├── perfiles.routes.js
+    │   ├── catalogos.routes.js
+    │   ├── planillas.routes.js
+    │   ├── barridos.routes.js
+    │   ├── conteos.routes.js
+    │   └── reportes.routes.js
     ├── controllers/              # Lógica request/response
     ├── services/                 # Lógica de negocio + Supabase
     ├── validators/               # Schemas Zod por módulo
@@ -215,6 +227,8 @@ El backend usa **dos clientes** Supabase por request:
 | POST | `/bulk` | Carga masiva de catálogos | superadmin, admin |
 | PUT | `/:id` | Actualizar catálogo | superadmin, admin |
 
+**NOTA bulk catálogos:** El CSV solo incluye `id_elemento, descripcion, activo`. El `id_tabla` se envía como campo top-level en el body (`{ "id_tabla": "CUNIDAD", "catalogos": [...] }`).
+
 ### Planillas (`/api/planillas`)
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
@@ -222,21 +236,23 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/barridos` | Códigos de barrido únicos | Autenticado |
 | GET | `/almacenes` | Almacenes únicos | Autenticado |
 | GET | `/:id` | Obtener planilla | Autenticado |
-| GET | `/:id/conteos` | Conteos de una planilla | Autenticado |
+| GET | `/:id/conteos` | Conteos de un barrido (query por `barrido_id`) | Autenticado |
 | POST | `/` | Crear planilla | superadmin, admin |
-| POST | `/bulk` | Carga masiva de planillas | superadmin, admin |
+| POST | `/bulk` | Carga masiva de planillas (barrido top-level) | superadmin, admin |
 | PUT | `/:id` | Actualizar planilla | superadmin, admin |
 | DELETE | `/:id` | Eliminar planilla | superadmin |
+
+**NOTA bulk planillas:** El body es `{ "barrido": "BARRIDO-001", "planillas": [{ "id_alm": "...", "codigo": "...", ... }] }`. El `barrido` se envía UNA sola vez en el nivel superior, no por cada item.
 
 ### Barridos (`/api/barridos`)
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
-| GET | `/` | Listar barridos (paginado, filtro `?estado=&search=`) | Autenticado |
+| GET | `/` | Listar barridos (paginado, filtro `?estado=&search=`) | superadmin, admin |
 | GET | `/:id` | Obtener barrido | Autenticado |
 | POST | `/` | Crear barrido | superadmin, admin |
 | PUT | `/:id` | Actualizar barrido | superadmin, admin |
 | DELETE | `/:id` | Eliminar barrido | superadmin |
-| GET | `/:id/usuarios` | Listar asignados al barrido | Autenticado |
+| GET | `/:id/usuarios` | Listar asignados al barrido | superadmin, admin |
 | POST | `/:id/usuarios` | Asignar inventariadores (`{ usuario_ids: [...] }`) | superadmin, admin |
 | DELETE | `/:id/usuarios/:uid` | Desasignar inventariador | superadmin, admin |
 | GET | `/mis-barridos` | Barridos asignados al inventariador actual | inventariador |
@@ -248,11 +264,13 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/mis-conteos` | Conteos del inventariador | inventariador |
 | GET | `/` | Listar conteos (paginado) | Autenticado |
 | GET | `/:id` | Obtener conteo | Autenticado |
-| POST | `/` | Crear conteo (captura campo) | inventariador, admin, superadmin |
+| POST | `/` | Crear conteo (captura campo) — envía `barrido`, `barrido_id`, `codigo` | inventariador, admin, superadmin |
 | POST | `/bulk` | Carga masiva (sync offline) | inventariador, admin, superadmin |
-| PUT | `/:id` | Actualizar conteo | inventor, admin, superadmin |
+| PUT | `/:id` | Actualizar conteo | inventariador, admin, superadmin |
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
+
+**NOTA crear conteo:** El campo `planilla_id` fue eliminado. Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario.
 
 ### Reportes (`/api/reportes`)
 | Método | Ruta | Descripción | Roles |
@@ -316,6 +334,10 @@ inventarios/
 │   ├── .env.example              # Plantilla
 │   ├── package.json              # Dependencias
 │   ├── render.yaml               # Config Render IaC
+│   ├── migrations/               # Scripts SQL de migración
+│   │   ├── 001_full_schema.sql
+│   │   ├── 002_rename_articulo_to_descripcion.sql
+│   │   └── 003_add_barrido_id_to_conteos.sql
 │   └── src/                      # Código fuente
 ├── front/                        # Frontend (Vite + vanilla JS, deploy GitHub Pages)
 │   ├── src/
@@ -403,6 +425,40 @@ El backend automáticamente aplica `UPPER(TRIM())` a:
 - Series/Lotes
 - Códigos de barrido y almacén
 
+### CSV - Formatos de Carga
+**Catálogos** (POST `/api/catalogos/bulk`):
+```json
+{
+  "id_tabla": "CUNIDAD",
+  "catalogos": [
+    { "id_elemento": "PZA", "descripcion": "Pieza", "activo": true },
+    { "id_elemento": "KG", "descripcion": "Kilogramo", "activo": true }
+  ]
+}
+```
+
+**Planillas** (POST `/api/planillas/bulk`):
+```json
+{
+  "barrido": "BARRIDO-001",
+  "planillas": [
+    { "id_alm": "ALM001", "codigo": "ART001", "descripcion": "Articulo", "existencia": 100 }
+  ]
+}
+```
+
+**Conteos** (POST `/api/conteos/bulk`):
+```json
+{
+  "capturas": [
+    { "barrido": "BARRIDO-001", "barrido_id": 1, "codigo": "ART001", "ubicacion": "ESTANTE-01", "conteo": 50, "cunidad": "PZA" }
+  ]
+}
+```
+
+### Campos Booleanos
+En JSON, los campos booleanos usan `true`/`false` minúsculas sin comillas: `"maneja_serie_lote": true`, `"activo": false`.
+
 ---
 
 ## 12. COLECCIONES POSTMAN
@@ -436,6 +492,12 @@ Para reconstruir la base de datos completa, ejecutar en orden:
    - RLS habilitado en todas las tablas con políticas completas
    - Vistas: `vw_catalogos_activos`, `vw_resumen_diferencias_inventario`
 
-2. **`back/migrations/002_rename_articulo_to_descripcion.sql`** — Migración增量 (ya aplicada)
+2. **`back/migrations/002_rename_articulo_to_descripcion.sql`** — Migración incremental (ya aplicada)
 
-**IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa.
+3. **`back/migrations/003_add_barrido_id_to_conteos.sql`** — Migración incremental que:
+   - Elimina columna `planilla_id` de `captura_inventario_conteos`
+   - Elimina columna `id_barrido` (duplicada, ya se usa `barrido_id`)
+   - Agrega columna `barrido_id` (BIGINT, FK → `barridos.id`, ON DELETE SET NULL)
+   - Amplía `cunidad` de VARCHAR(20) a VARCHAR(50) en `captura_inventario_conteos` y `planillasinventario`
+
+**IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa. Las migraciones 002 y 003 son incrementales y seguras para producción.
