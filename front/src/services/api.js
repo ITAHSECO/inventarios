@@ -20,7 +20,10 @@ async function request(endpoint, options = {}) {
 
     if (!response.ok) {
       console.error(`[API] ${response.status} ${endpoint}`, data);
-      throw new Error(data.error?.message || 'Error en la solicitud');
+      const err = new Error(data.error?.message || 'Error en la solicitud');
+      err.details = data.error?.details || null;
+      err.status = response.status;
+      throw err;
     }
 
     console.log(`[API] OK ${endpoint}`, data);

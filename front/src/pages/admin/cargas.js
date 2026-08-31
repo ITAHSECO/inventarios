@@ -177,9 +177,15 @@ function maskPassword(val) {
 
 function showResult(el, data, type) {
   const isError = type === 'error';
+  const details = data.details || data.error?.details || [];
   el.innerHTML = `
     <div class="result-box ${isError ? 'result-error' : 'result-success'}">
       <p>${isError ? data.message || 'Error en la carga' : `Operacion completada. Registros procesados: ${data.inserted || data.created || 0}`}</p>
+      ${details.length > 0 ? `
+        <ul class="result-errors">
+          ${details.map(e => `<li>${e.field ? e.field + ': ' : ''}${e.message}</li>`).join('')}
+        </ul>
+      ` : ''}
       ${data.errors && data.errors.length > 0 ? `
         <ul class="result-errors">
           ${data.errors.map(e => `<li>Fila ${e.row || ''}: ${e.message}</li>`).join('')}
@@ -318,22 +324,46 @@ async function initMaestra() {
     btn.textContent = 'Cargando...';
 
     try {
-      const catalogos = parsedData.map(row => ({
-        id_tabla: document.getElementById('m-tabla').value,
-        id_elemento: row.id_elemento,
-        descripcion: row.descripcion,
-        activo: row.activo !== 'false' && row.activo !== '0',
-      }));
+      const tabla = document.getElementById('m-tabla').value;
+      if (!tabla) {
+        showResult(document.getElementById('m-result'), { message: 'Seleccione una tabla destino' }, 'error');
+        return;
+      }
+
+      const skipped = [];
+      const catalogos = [];
+      parsedData.forEach((row, i) => {
+        if (!row.id_elemento || !row.id_elemento.trim() || !row.descripcion || !row.descripcion.trim()) {
+          skipped.push(i + 2);
+          return;
+        }
+        catalogos.push({
+          id_tabla: tabla,
+          id_elemento: row.id_elemento,
+          descripcion: row.descripcion,
+          activo: row.activo !== 'false' && row.activo !== '0',
+        });
+      });
+
+      if (catalogos.length === 0) {
+        showResult(document.getElementById('m-result'), { message: 'No hay registros validos para cargar (id_elemento y descripcion son obligatorios)' }, 'error');
+        return;
+      }
+
+      if (skipped.length > 0) {
+        console.warn(`[Cargas] Filas omitidas por campos vacios: ${skipped.join(', ')}`);
+      }
 
       console.log('[Cargas] Uploading catalogos:', catalogos.length);
       const result = await catalogosService.bulkCreate(catalogos);
       console.log('[Cargas] Catalogos uploaded:', result);
-      showResult(document.getElementById('m-result'), result, 'success');
+      const msg = skipped.length > 0 ? `Carga completada. Filas omitidas (${skipped.length}): ${skipped.slice(0, 10).join(', ')}${skipped.length > 10 ? '...' : ''}` : undefined;
+      showResult(document.getElementById('m-result'), { ...result, message: msg }, 'success');
       parsedData = null;
       document.getElementById('m-preview').style.display = 'none';
       document.getElementById('m-file').value = '';
     } catch (err) {
-      console.error('[Cargas] Catalogos upload failed:', err.message);
+      console.error('[Cargas] Catalogos upload failed:', err.message, err.details);
       showResult(document.getElementById('m-result'), err, 'error');
     } finally {
       btn.disabled = false;
