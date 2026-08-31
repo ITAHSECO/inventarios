@@ -8,6 +8,21 @@ const USUARIOS_HEADERS = ['email', 'password', 'username', 'nombres', 'apellidos
 const CATALOGOS_HEADERS = ['id_tabla', 'id_elemento', 'descripcion', 'activo'];
 const PLANILLAS_HEADERS = ['codigo', 'cod_fab', 'existencia', 'descripcion', 'cunidad', 'id_alm', 'id_marca', 'id_categoria', 'serie_lote', 'vcto', 'maneja_serie_lote'];
 
+const USUARIOS_EXAMPLE = ['usuario@correo.com', 'MiPassword123', 'jdoe', 'Juan', 'Doe', 'inventariador'];
+const CATALOGOS_EXAMPLE = ['ALMACEN', 'ALM001', 'Almacen Principal', 'true'];
+const PLANILLAS_EXAMPLE = ['COD001', 'FAB001', '10', 'Widget Standard', 'PIEZA', 'ALM001', 'MARCA1', 'CAT1', '-', '', 'false'];
+
+function downloadTemplate(filename, headers, exampleRow) {
+  const csv = [headers.join(','), exampleRow.join(',')].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function renderCargas(container) {
   container.innerHTML = `
     <div class="page-container">
@@ -28,6 +43,7 @@ export async function renderCargas(container) {
         <div class="carga-panel">
           <h2>Carga Masiva de Usuarios</h2>
           <p class="carga-hint">CSV con columnas: <code>email, password, username, nombres, apellidos, rol</code></p>
+          <button class="btn btn-outline btn-sm" id="u-template">Descargar plantilla CSV</button>
 
           <div class="form-group">
             <label for="u-file">Seleccionar archivo CSV</label>
@@ -46,6 +62,7 @@ export async function renderCargas(container) {
         <div class="carga-panel">
           <h2>Carga Masiva de Tablas Maestras</h2>
           <p class="carga-hint">CSV con columnas: <code>id_elemento, descripcion, activo</code></p>
+          <button class="btn btn-outline btn-sm" id="m-template">Descargar plantilla CSV</button>
 
           <div class="form-group">
             <label for="m-tabla">Tabla destino</label>
@@ -71,6 +88,7 @@ export async function renderCargas(container) {
         <div class="carga-panel">
           <h2>Carga Masiva de Planilla de Inventario</h2>
           <p class="carga-hint">CSV con columnas: <code>codigo, cod_fab, existencia, descripcion, cunidad, id_alm, id_marca, id_categoria, serie_lote, vcto, maneja_serie_lote</code></p>
+          <button class="btn btn-outline btn-sm" id="p-template">Descargar plantilla CSV</button>
 
           <div class="form-group">
             <label for="p-barrido">Barrido destino</label>
@@ -104,6 +122,7 @@ export async function renderCargas(container) {
   `;
 
   bindTabs();
+  bindTemplateDownloads();
   await initUsuarios();
   await initMaestra();
   await initPlanilla();
@@ -117,6 +136,18 @@ function bindTabs() {
       tab.classList.add('active');
       document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
     });
+  });
+}
+
+function bindTemplateDownloads() {
+  document.getElementById('u-template').addEventListener('click', () => {
+    downloadTemplate('plantilla_usuarios.csv', USUARIOS_HEADERS, USUARIOS_EXAMPLE);
+  });
+  document.getElementById('m-template').addEventListener('click', () => {
+    downloadTemplate('plantilla_maestra.csv', CATALOGOS_HEADERS, CATALOGOS_EXAMPLE);
+  });
+  document.getElementById('p-template').addEventListener('click', () => {
+    downloadTemplate('plantilla_planilla.csv', PLANILLAS_HEADERS, PLANILLAS_EXAMPLE);
   });
 }
 
