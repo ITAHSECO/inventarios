@@ -55,12 +55,12 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 
 ### D. `public.captura_inventario_conteos` (Lecturas de Campo)
 - `id` (BIGINT, GENERATED ALWAYS AS IDENTITY, PK)
-- `planilla_id` (BIGINT, FK `public.planillasInventario.id`, RESTRICT, NOT NULL)
-- `barrido` (VARCHAR(100), NOT NULL)
-- `codigo` (VARCHAR(50), NOT NULL)
+- `planilla_id` (BIGINT, FK `public.planillasInventario.id`, RESTRICT, NULL) -> Opcional: se envia si el articulo existe en la planilla
+- `barrido` (VARCHAR(100), NOT NULL) -> Nombre del barrido activo
+- `codigo` (VARCHAR(50), NOT NULL) -> Codigo del articulo
 - `descripcion` (VARCHAR(255), NULL) -> Descripcion del articulo al momento del conteo
-- `ubicacion` (VARCHAR(100), NOT NULL)
-- `conteo` (NUMERIC(12, 4), CHECK >= 0, NOT NULL)
+- `ubicacion` (VARCHAR(100), NOT NULL) -> Ubicacion fisica del articulo
+- `conteo` (NUMERIC(12, 4), CHECK >= 0, NOT NULL) -> Cantidad contada
 - `cunidad` (VARCHAR(20), NULL) -> Unidad de medida
 - `serie_lote` (VARCHAR(100), DEFAULT '-', NOT NULL)
 - `vcto_capturado` (DATE, NULL)
@@ -420,3 +420,22 @@ Variables de colección:
 - `baseUrl`: `http://localhost:3000/api` (cambiar según entorno)
 - `token`: Se auto-asigna tras login exitoso
 - `userId`: Se auto-asigna tras login exitoso
+
+---
+
+## 13. SCRIPTS SQL DE RECONSTRUCCION
+
+Para reconstruir la base de datos completa, ejecutar en orden:
+
+1. **`back/migrations/001_full_schema.sql`** — Script completo que crea:
+   - Extension `pgcrypto`
+   - Tipo ENUM `app_role`
+   - Todas las 6 tablas con constraints y foreign keys
+   - Funciones: `fn_obtener_rol_usuario`, `fn_establecer_pin_supervisor`, `fn_validar_pin_supervisor`
+   - Triggers: `trg_on_auth_user_created`, `trg_conteos_validar_serie_lote`
+   - RLS habilitado en todas las tablas con políticas completas
+   - Vistas: `vw_catalogos_activos`, `vw_resumen_diferencias_inventario`
+
+2. **`back/migrations/002_rename_articulo_to_descripcion.sql`** — Migración增量 (ya aplicada)
+
+**IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa.

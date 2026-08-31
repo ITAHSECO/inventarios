@@ -1,13 +1,11 @@
-import { planillasService } from '../../services/planillas.service.js';
+import { barridosService } from '../../services/barridos.service.js';
 import { catalogosService } from '../../services/catalogos.service.js';
 import { conteosService } from '../../services/conteos.service.js';
 
 let barridos = [];
 let unidades = [];
-let selectedPlanilla = null;
-let currentPage = 1;
 let currentBarrido = '';
-let currentSearch = '';
+let searchTimer = null;
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
@@ -18,7 +16,7 @@ export async function renderCaptura(container) {
 
   try {
     const [barridosRes, unidadesRes] = await Promise.all([
-      planillasService.getBarridos(),
+      barridosService.list({ limit: 100, estado: 'activo' }),
       catalogosService.getActivos('UNIDAD'),
     ]);
     barridos = barridosRes.data || [];
@@ -42,33 +40,29 @@ export async function renderCaptura(container) {
       </header>
 
       <main class="dashboard-main" style="max-width:800px;">
-        <div class="capture-section">
-          <h2 class="section-title">1. Seleccionar Barrido</h2>
+        <div class="capture-section" id="barridoSection">
+          <h2 class="section-title">Seleccionar Barrido</h2>
           <div class="filters-bar">
             <select id="filterBarrido" class="filter-select" style="flex:1;">
               <option value="">-- Seleccione barrido --</option>
-              ${barridos.map(b => `<option value="${b}">${b}</option>`).join('')}
+              ${barridos.map(b => `<option value="${b.nombre}">${b.nombre}</option>`).join('')}
             </select>
           </div>
         </div>
 
-        <div class="capture-section" id="planillasSection" style="display:none;">
-          <h2 class="section-title">2. Seleccionar Articulo</h2>
-          <div class="filters-bar">
-            <input type="text" id="searchPlanilla" class="filter-input" placeholder="Buscar por codigo o descripcion...">
-          </div>
-          <div id="planillasTable" class="table-container"></div>
-          <div id="planillasPagination" class="pagination"></div>
-        </div>
-
         <div class="capture-section" id="formSection" style="display:none;">
-          <h2 class="section-title">3. Registrar Conteo</h2>
-          <div id="selectedInfo" class="selected-info"></div>
+          <div id="barridoActivo" class="confirm-box" style="display:none;">
+            <span>Barrido: <strong id="barridoNombre"></strong></span>
+            <button class="btn btn-outline btn-sm" id="changeBarrido">Cambiar</button>
+          </div>
+
+          <h2 class="section-title">Registrar Conteo</h2>
           <form id="captureForm" novalidate>
             <div class="form-row">
               <div class="form-group">
                 <label for="f_codigo">Codigo</label>
-                <input type="text" id="f_codigo" class="input-disabled" readonly>
+                <input type="text" id="f_codigo" maxlength="50" placeholder="Buscar por codigo o cod.fab...">
+                <small id="codigoStatus" class="field-hint"></small>
               </div>
               <div class="form-group">
                 <label for="f_unidad">Unidad *</label>
@@ -80,7 +74,7 @@ export async function renderCaptura(container) {
             </div>
             <div class="form-group">
               <label for="f_descripcion">Descripcion</label>
-              <input type="text" id="f_descripcion" class="input-disabled" readonly>
+              <input type="text" id="f_descripcion" maxlength="255" placeholder="Se autollena si el codigo existe, o escriba manualmente">
             </div>
             <div class="form-row">
               <div class="form-group">
@@ -110,12 +104,12 @@ export async function renderCaptura(container) {
             <div id="formSuccess" class="form-success" style="display:none;"></div>
             <div style="display:flex;gap:0.5rem;">
               <button type="submit" class="btn btn-primary" id="submitBtn">Registrar</button>
-              <button type="button" class="btn btn-outline" id="cancelBtn">Cancelar</button>
+              <button type="button" class="btn btn-outline" id="resetBtn">Limpiar</button>
             </div>
           </form>
         </div>
 
-        <div class="capture-section">
+        <div class="capture-section" id="countsSection" style="display:none;">
           <h2 class="section-title">Mis Conteos Recientes</h2>
           <div id="myCountsContainer" class="table-container"></div>
           <div id="myCountsPagination" class="pagination"></div>
@@ -125,34 +119,58 @@ export async function renderCaptura(container) {
   `;
 
   bindEvents();
-  loadMyCounts();
 }
 
 function bindEvents() {
   document.getElementById('filterBarrido').addEventListener('change', (e) => {
-    currentBarrido = e.target.value;
-    currentPage = 1;
-    selectedPlanilla = null;
-    document.getElementById('formSection').style.display = 'none';
-    if (currentBarrido) {
-      document.getElementById('planillasSection').style.display = 'block';
-      loadPlanillas();
-    } else {
-      document.getElementById('planillasSection').style.display = 'none';
+    const val = e.target.value;
+    if (val) {
+      currentBarrido = val;
+      document.getElementById('barridoSection').querySelector('.section-title').textContent = 'Barrido Activo';
+      document.getElementById('barridoActivo').style.display = 'flex';
+      document.getElementById('barridoNombre').textContent = val;
+      document.getElementById('filterBarrido').style.display = 'none';
+      document.getElementById('formSection').style.display = 'block';
+      document.getElementById('countsSection').style.display = 'block';
+      loadMyCounts();
+      document.getElementById('f_codigo').focus();
     }
   });
 
-  document.getElementById('searchPlanilla').addEventListener('input', debounce(() => {
-    currentSearch = document.getElementById('searchPlanilla').value;
-    currentPage = 1;
-    loadPlanillas();
-  }, 400));
+  document.getElementById('changeBarrido').addEventListener('click', () => {
+    currentBarrido = '';
+    document.getElementById('filterBarrido').value = '';
+    document.getElementById('filterBarrido').style.display = '';
+    document.getElementById('barridoSection').querySelector('.section-title').textContent = 'Seleccionar Barrido';
+    document.getElementById('barridoActivo').style.display = 'none';
+    document.getElementById('formSection').style.display = 'none';
+    document.getElementById('countsSection').style.display = 'none';
+    document.getElementById('captureForm').reset();
+    document.getElementById('formError').style.display = 'none';
+    document.getElementById('formSuccess').style.display = 'none';
+    document.getElementById('codigoStatus').textContent = '';
+    clearSerieLote();
+  });
+
+  document.getElementById('f_codigo').addEventListener('input', (e) => {
+    clearTimeout(searchTimer);
+    const codigo = e.target.value.trim();
+    const statusEl = document.getElementById('codigoStatus');
+
+    if (!codigo) {
+      statusEl.textContent = '';
+      statusEl.className = 'field-hint';
+      return;
+    }
+
+    statusEl.textContent = 'Buscando...';
+    statusEl.className = 'field-hint';
+
+    searchTimer = setTimeout(() => searchCodigo(codigo), 400);
+  });
 
   document.getElementById('captureForm').addEventListener('submit', handleCaptureSubmit);
-  document.getElementById('cancelBtn').addEventListener('click', () => {
-    selectedPlanilla = null;
-    document.getElementById('formSection').style.display = 'none';
-  });
+  document.getElementById('resetBtn').addEventListener('click', resetForm);
 
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     localStorage.clear();
@@ -160,105 +178,84 @@ function bindEvents() {
   });
 }
 
-async function loadPlanillas() {
-  const tableEl = document.getElementById('planillasTable');
-  tableEl.innerHTML = '<p class="loading">Cargando...</p>';
+async function searchCodigo(codigo) {
+  const statusEl = document.getElementById('codigoStatus');
+  const descInput = document.getElementById('f_descripcion');
+  const unidadSelect = document.getElementById('f_unidad');
 
   try {
-    const params = { page: currentPage, limit: 10, barrido: currentBarrido };
-    if (currentSearch) params.search = currentSearch;
+    const result = await planillasService.list({ barrido: currentBarrido, search: codigo, limit: 10 });
+    const matches = result.data || [];
 
-    console.log('[Captura] Loading planillas:', params);
-    const result = await planillasService.list(params);
-    const { data, meta } = result;
+    const exactCodigo = matches.find(p => p.codigo && p.codigo.toUpperCase() === codigo.toUpperCase());
+    const exactFab = matches.find(p => p.cod_fab && p.cod_fab.toUpperCase() === codigo.toUpperCase());
+    const match = exactCodigo || exactFab || matches[0];
 
-    if (!data || data.length === 0) {
-      tableEl.innerHTML = '<p class="empty-state">No se encontraron articulos para este barrido.</p>';
-      document.getElementById('planillasPagination').innerHTML = '';
-      return;
+    if (match && (exactCodigo || exactFab || matches.length === 1)) {
+      descInput.value = match.descripcion || '';
+      descInput.readOnly = true;
+      descInput.classList.add('input-disabled');
+
+      if (match.cunidad) {
+        unidadSelect.value = match.cunidad;
+      }
+
+      if (match.maneja_serie_lote) {
+        document.getElementById('serieLoteGroup').style.display = 'block';
+        document.getElementById('f_serie_lote').required = true;
+        document.getElementById('f_serie_lote').value = match.serie_lote || '';
+      } else {
+        clearSerieLote();
+      }
+
+      if (match.vcto) {
+        document.getElementById('f_vcto').value = match.vcto;
+      }
+
+      statusEl.textContent = `Encontrado: ${match.codigo} - ${match.descripcion}`;
+      statusEl.className = 'field-hint field-hint-ok';
+    } else if (matches.length > 1) {
+      statusEl.textContent = `${matches.length} coincidencias. Seleccione una opcion o escriba mas caracteres.`;
+      statusEl.className = 'field-hint field-hint-warn';
+      descInput.value = '';
+      descInput.readOnly = false;
+      descInput.classList.remove('input-disabled');
+      clearSerieLote();
+    } else {
+      statusEl.textContent = 'Codigo no encontrado. Escriba la descripcion manualmente.';
+      statusEl.className = 'field-hint field-hint-warn';
+      descInput.value = '';
+      descInput.readOnly = false;
+      descInput.classList.remove('input-disabled');
+      clearSerieLote();
     }
-
-    tableEl.innerHTML = `
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Codigo</th>
-            <th>Descripcion</th>
-            <th>Almacen</th>
-            <th>Existencia</th>
-            <th>Accion</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${data.map(p => `
-            <tr>
-              <td>${p.codigo}</td>
-              <td>${p.descripcion}</td>
-              <td>${p.id_alm}</td>
-              <td>${p.existencia}</td>
-              <td>
-                <button class="btn btn-primary btn-sm" onclick="window._selectPlanilla(${p.id})">Seleccionar</button>
-              </td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-
-    renderPlanillasPagination(meta);
-    bindPlanillaActions(data);
   } catch (err) {
-    console.error('[Captura] Load planillas failed:', err.message);
-    tableEl.innerHTML = `<p class="form-error" style="display:block;">${err.message}</p>`;
+    console.error('[Captura] Search failed:', err.message);
+    statusEl.textContent = 'Error al buscar. Escriba la descripcion manualmente.';
+    statusEl.className = 'field-hint field-hint-warn';
+    descInput.value = '';
+    descInput.readOnly = false;
+    descInput.classList.remove('input-disabled');
+    clearSerieLote();
   }
 }
 
-function bindPlanillaActions(data) {
-  window._selectPlanilla = (id) => {
-    const planilla = data.find(p => p.id === id);
-    if (!planilla) return;
-    selectedPlanilla = planilla;
-    console.log('[Captura] Selected planilla:', planilla);
-    showCaptureForm(planilla);
-  };
+function clearSerieLote() {
+  document.getElementById('serieLoteGroup').style.display = 'none';
+  document.getElementById('f_serie_lote').required = false;
+  document.getElementById('f_serie_lote').value = '';
 }
 
-function showCaptureForm(planilla) {
-  const formSection = document.getElementById('formSection');
-  formSection.style.display = 'block';
-
-  document.getElementById('selectedInfo').innerHTML = `
-    <div class="selected-card">
-      <strong>${planilla.codigo}</strong> - ${planilla.descripcion}<br>
-      <small>Almacen: ${planilla.id_alm} | Existencia: ${planilla.existencia} | Barrido: ${planilla.barrido}</small>
-      ${planilla.serie_lote && planilla.serie_lote !== '-' ? `<br><small>Serie/Lote: ${planilla.serie_lote}</small>` : ''}
-      ${planilla.vcto ? `<br><small>Vence: ${planilla.vcto}</small>` : ''}
-    </div>
-  `;
-
-  document.getElementById('f_codigo').value = planilla.codigo || '';
-  document.getElementById('f_descripcion').value = planilla.descripcion || '';
-
-  const serieLoteGroup = document.getElementById('serieLoteGroup');
-  if (planilla.maneja_serie_lote) {
-    serieLoteGroup.style.display = 'block';
-    document.getElementById('f_serie_lote').required = true;
-  } else {
-    serieLoteGroup.style.display = 'none';
-    document.getElementById('f_serie_lote').required = false;
-  }
-
-  document.getElementById('f_unidad').value = planilla.cunidad || '';
-  document.getElementById('f_ubicacion').value = '';
-  document.getElementById('f_conteo').value = '';
-  document.getElementById('f_serie_lote').value = planilla.serie_lote || '';
-  document.getElementById('f_vcto').value = planilla.vcto || '';
-  document.getElementById('f_observacion').value = '';
+function resetForm() {
+  document.getElementById('captureForm').reset();
+  document.getElementById('f_descripcion').readOnly = false;
+  document.getElementById('f_descripcion').classList.remove('input-disabled');
+  document.getElementById('codigoStatus').textContent = '';
+  document.getElementById('codigoStatus').className = 'field-hint';
   document.getElementById('formError').style.display = 'none';
   document.getElementById('formSuccess').style.display = 'none';
-
-  formSection.scrollIntoView({ behavior: 'smooth' });
-  document.getElementById('f_ubicacion').focus();
+  clearSerieLote();
+  document.getElementById('f_codigo').focus();
 }
 
 async function handleCaptureSubmit(e) {
@@ -268,34 +265,37 @@ async function handleCaptureSubmit(e) {
   errorDiv.style.display = 'none';
   successDiv.style.display = 'none';
 
-  if (!selectedPlanilla) {
-    errorDiv.textContent = 'Debe seleccionar un articulo';
+  if (!currentBarrido) {
+    errorDiv.textContent = 'Debe seleccionar un barrido';
     errorDiv.style.display = 'block';
     return;
   }
 
-  const data = {
-    planilla_id: selectedPlanilla.id,
-    descripcion: selectedPlanilla.descripcion || null,
-    ubicacion: document.getElementById('f_ubicacion').value.trim(),
-    conteo: parseFloat(document.getElementById('f_conteo').value),
-    cunidad: document.getElementById('f_unidad').value,
-    serie_lote: document.getElementById('f_serie_lote').value.trim() || '-',
-    vcto_capturado: document.getElementById('f_vcto').value || null,
-    observacion: document.getElementById('f_observacion').value.trim() || null,
-  };
+  const codigo = document.getElementById('f_codigo').value.trim();
+  const descripcion = document.getElementById('f_descripcion').value.trim();
+  const ubicacion = document.getElementById('f_ubicacion').value.trim();
+  const conteo = parseFloat(document.getElementById('f_conteo').value);
+  const cunidad = document.getElementById('f_unidad').value;
+  const serie_lote = document.getElementById('f_serie_lote').value.trim() || '-';
+  const vcto_capturado = document.getElementById('f_vcto').value || null;
+  const observacion = document.getElementById('f_observacion').value.trim() || null;
 
-  if (!data.ubicacion) {
+  if (!codigo) {
+    errorDiv.textContent = 'El codigo es requerido';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  if (!ubicacion) {
     errorDiv.textContent = 'La ubicacion es requerida';
     errorDiv.style.display = 'block';
     return;
   }
-  if (isNaN(data.conteo) || data.conteo < 0) {
+  if (isNaN(conteo) || conteo < 0) {
     errorDiv.textContent = 'El conteo debe ser un numero mayor o igual a 0';
     errorDiv.style.display = 'block';
     return;
   }
-  if (!data.cunidad) {
+  if (!cunidad) {
     errorDiv.textContent = 'La unidad es requerida';
     errorDiv.style.display = 'block';
     return;
@@ -305,14 +305,25 @@ async function handleCaptureSubmit(e) {
   submitBtn.disabled = true;
 
   try {
+    const data = {
+      planilla_id: null,
+      barrido: currentBarrido,
+      codigo,
+      descripcion: descripcion || null,
+      ubicacion,
+      conteo,
+      cunidad,
+      serie_lote,
+      vcto_capturado,
+      observacion,
+    };
+
     console.log('[Captura] Submitting:', data);
     await conteosService.create(data);
     console.log('[Captura] Created');
     successDiv.textContent = 'Conteo registrado exitosamente';
     successDiv.style.display = 'block';
-    document.getElementById('captureForm').reset();
-    selectedPlanilla = null;
-    document.getElementById('formSection').style.display = 'none';
+    resetForm();
     loadMyCounts();
   } catch (err) {
     console.error('[Captura] Submit failed:', err.message);
@@ -366,32 +377,4 @@ async function loadMyCounts() {
     console.error('[Captura] Load my counts failed:', err.message);
     container.innerHTML = `<p class="form-error" style="display:block;">${err.message}</p>`;
   }
-}
-
-function renderPlanillasPagination(meta) {
-  const pag = document.getElementById('planillasPagination');
-  if (!meta || meta.totalPages <= 1) { pag.innerHTML = ''; return; }
-
-  let html = '';
-  if (currentPage > 1) html += `<button class="btn btn-outline btn-sm" data-page="${currentPage - 1}">Anterior</button>`;
-  for (let i = 1; i <= meta.totalPages; i++) {
-    html += `<button class="btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline'}" data-page="${i}">${i}</button>`;
-  }
-  if (currentPage < meta.totalPages) html += `<button class="btn btn-outline btn-sm" data-page="${currentPage + 1}">Siguiente</button>`;
-  pag.innerHTML = html;
-
-  pag.querySelectorAll('button[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentPage = parseInt(btn.dataset.page);
-      loadPlanillas();
-    });
-  });
-}
-
-function debounce(fn, ms) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), ms);
-  };
 }

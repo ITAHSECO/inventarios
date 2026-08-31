@@ -2,7 +2,9 @@ const { z } = require('zod');
 
 const createConteoSchema = z.object({
   body: z.object({
-    planilla_id: z.coerce.number().int().positive(),
+    planilla_id: z.coerce.number().int().positive().optional().nullable(),
+    barrido: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()).optional().nullable(),
+    codigo: z.string().min(1).max(50).transform((v) => v.toUpperCase().trim()).optional().nullable(),
     descripcion: z.string().max(255).optional().nullable(),
     ubicacion: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()),
     conteo: z.coerce.number().min(0),

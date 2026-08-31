@@ -7,6 +7,9 @@ ALTER TABLE public.planillasinventario RENAME COLUMN articulo TO descripcion;
 -- 2. Agregar columna descripcion a captura_inventario_conteos
 ALTER TABLE public.captura_inventario_conteos ADD COLUMN descripcion VARCHAR(255) NULL;
 
+-- 2b. Agregar columna cunidad a captura_inventario_conteos
+ALTER TABLE public.captura_inventario_conteos ADD COLUMN cunidad VARCHAR(20) NULL;
+
 COMMENT ON COLUMN public.planillasinventario.descripcion IS 'Nombre/descripcion del articulo (renombrado desde articulo)';
 COMMENT ON COLUMN public.captura_inventario_conteos.descripcion IS 'Descripcion del articulo al momento del conteo';
 

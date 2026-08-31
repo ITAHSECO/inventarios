@@ -36,23 +36,36 @@ class ConteosService {
   }
 
   async create(conteo, userId) {
-    const planilla = await this._getPlanilla(conteo.planilla_id);
+    let barrido = conteo.barrido;
+    let codigo = conteo.codigo;
+    let descripcion = conteo.descripcion || null;
 
-    if (planilla.maneja_serie_lote) {
-      if (!conteo.serie_lote || conteo.serie_lote === '-' || conteo.serie_lote.trim() === '') {
-        throw ApiError.badRequest(
-          'El articulo maneja serie/lote y requiere un valor valido (no vacio ni "-")'
-        );
+    if (conteo.planilla_id) {
+      const planilla = await this._getPlanilla(conteo.planilla_id);
+      barrido = planilla.barrido;
+      codigo = planilla.codigo;
+      descripcion = descripcion || planilla.descripcion || null;
+
+      if (planilla.maneja_serie_lote) {
+        if (!conteo.serie_lote || conteo.serie_lote === '-' || conteo.serie_lote.trim() === '') {
+          throw ApiError.badRequest(
+            'El articulo maneja serie/lote y requiere un valor valido (no vacio ni "-")'
+          );
+        }
       }
+    }
+
+    if (!barrido || !codigo) {
+      throw ApiError.badRequest('Se requiere planilla_id o barrido + codigo');
     }
 
     const { data, error } = await supabaseAdmin
       .from('captura_inventario_conteos')
       .insert({
-        planilla_id: conteo.planilla_id,
-        barrido: planilla.barrido,
-        codigo: planilla.codigo,
-        descripcion: conteo.descripcion || planilla.descripcion || null,
+        planilla_id: conteo.planilla_id || null,
+        barrido,
+        codigo,
+        descripcion,
         ubicacion: conteo.ubicacion,
         conteo: conteo.conteo,
         cunidad: conteo.cunidad || null,
@@ -73,26 +86,41 @@ class ConteosService {
 
     for (const captura of capturas) {
       try {
-        const planilla = await this._getPlanilla(captura.planilla_id);
+        let barrido = captura.barrido;
+        let codigo = captura.codigo;
+        let descripcion = captura.descripcion || null;
 
-        if (planilla.maneja_serie_lote) {
-          if (!captura.serie_lote || captura.serie_lote === '-' || captura.serie_lote.trim() === '') {
-            results.errors.push({
-              planilla_id: captura.planilla_id,
-              error: 'Serie/lote requerido',
-            });
-            results.skipped++;
-            continue;
+        if (captura.planilla_id) {
+          const planilla = await this._getPlanilla(captura.planilla_id);
+          barrido = planilla.barrido;
+          codigo = planilla.codigo;
+          descripcion = descripcion || planilla.descripcion || null;
+
+          if (planilla.maneja_serie_lote) {
+            if (!captura.serie_lote || captura.serie_lote === '-' || captura.serie_lote.trim() === '') {
+              results.errors.push({
+                planilla_id: captura.planilla_id,
+                error: 'Serie/lote requerido',
+              });
+              results.skipped++;
+              continue;
+            }
           }
+        }
+
+        if (!barrido || !codigo) {
+          results.errors.push({ planilla_id: captura.planilla_id || null, error: 'Se requiere planilla_id o barrido + codigo' });
+          results.skipped++;
+          continue;
         }
 
         const { error } = await supabaseAdmin
           .from('captura_inventario_conteos')
           .insert({
-            planilla_id: captura.planilla_id,
-            barrido: planilla.barrido,
-            codigo: planilla.codigo,
-            descripcion: captura.descripcion || planilla.descripcion || null,
+            planilla_id: captura.planilla_id || null,
+            barrido,
+            codigo,
+            descripcion,
             ubicacion: captura.ubicacion,
             conteo: captura.conteo,
             cunidad: captura.cunidad || null,
@@ -103,13 +131,13 @@ class ConteosService {
           });
 
         if (error) {
-          results.errors.push({ planilla_id: captura.planilla_id, error: error.message });
+          results.errors.push({ planilla_id: captura.planilla_id || null, error: error.message });
           results.skipped++;
         } else {
           results.inserted++;
         }
       } catch (err) {
-        results.errors.push({ planilla_id: captura.planilla_id, error: err.message });
+        results.errors.push({ planilla_id: captura.planilla_id || null, error: err.message });
         results.skipped++;
       }
     }
