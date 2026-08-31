@@ -2,6 +2,16 @@ const { supabaseAdmin } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
+function normalizeDate(val) {
+  if (!val || typeof val !== 'string') return null;
+  const s = val.trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return null;
+}
+
 class PlanillasService {
   async list({ page, limit, barrido, id_alm, search }) {
     let query = supabaseAdmin.from('planillasinventario').select('*', { count: 'exact' });
@@ -36,9 +46,10 @@ class PlanillasService {
   }
 
   async create(planilla) {
+    const row = { ...planilla, vcto: normalizeDate(planilla.vcto) };
     const { data, error } = await supabaseAdmin
       .from('planillasinventario')
-      .insert(planilla)
+      .insert(row)
       .select()
       .single();
 
@@ -59,7 +70,7 @@ class PlanillasService {
       descripcion: p.descripcion || null,
       cunidad: p.cunidad || null,
       serie_lote: p.serie_lote || '-',
-      vcto: p.vcto || null,
+      vcto: normalizeDate(p.vcto),
       maneja_serie_lote: p.maneja_serie_lote || false,
     }));
 
@@ -74,6 +85,7 @@ class PlanillasService {
   }
 
   async update(id, updates) {
+    if (updates.vcto !== undefined) updates.vcto = normalizeDate(updates.vcto);
     const { data, error } = await supabaseAdmin
       .from('planillasinventario')
       .update(updates)
