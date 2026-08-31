@@ -131,6 +131,54 @@ class AuthService {
       throw ApiError.internal('Error al cambiar contrasena');
     }
   }
+
+  async bulkSignup(usuarios) {
+    logger.info({ count: usuarios.length }, '[AuthService] Bulk signup attempt');
+    const createdIds = [];
+
+    try {
+      for (let i = 0; i < usuarios.length; i++) {
+        const { email, password, username, nombres, apellidos, rol } = usuarios[i];
+
+        const { data: existing } = await supabaseAdmin
+          .from('perfiles')
+          .select('id')
+          .eq('username', username)
+          .single();
+
+        if (existing) {
+          throw new Error(`Fila ${i + 1}: El username "${username}" ya esta en uso`);
+        }
+
+        const { data, error } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { username, nombres, apellidos, rol: rol || 'inventariador' },
+        });
+
+        if (error) {
+          if (error.message.includes('already')) {
+            throw new Error(`Fila ${i + 1}: El email "${email}" ya esta registrado`);
+          }
+          throw new Error(`Fila ${i + 1}: ${error.message}`);
+        }
+
+        createdIds.push(data.user.id);
+      }
+
+      logger.info({ count: createdIds.length }, '[AuthService] Bulk signup completed');
+      return { created: createdIds.length, errors: [] };
+    } catch (err) {
+      logger.error({ error: err.message, createdCount: createdIds.length }, '[AuthService] Bulk signup failed, rolling back');
+
+      for (const userId of createdIds) {
+        await supabaseAdmin.auth.admin.deleteUser(userId).catch(() => {});
+      }
+
+      throw ApiError.badRequest(err.message);
+    }
+  }
 }
 
 module.exports = new AuthService();

@@ -14,4 +14,5 @@ export const planillasService = {
   getBarridos: () => api.get('/planillas/barridos'),
   getAlmacenes: () => api.get('/planillas/almacenes'),
   getById: (id) => api.get(`/planillas/${id}`),
+  bulkCreate: (barrido, planillas) => api.post('/planillas/bulk', { barrido, planillas }),
 };

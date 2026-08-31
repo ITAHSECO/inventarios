@@ -190,6 +190,7 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/me` | Obtener perfil actual | Autenticado |
 | POST | `/refresh` | Refrescar token | Público |
 | PUT | `/password` | Cambiar contraseña | Autenticado |
+| POST | `/bulk-signup` | Carga masiva de usuarios | superadmin, admin |
 
 ### Perfiles (`/api/perfiles`)
 | Método | Ruta | Descripción | Roles |
@@ -209,6 +210,7 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/` | Listar catálogos (paginado) | Autenticado |
 | GET | `/:id` | Obtener catálogo | Autenticado |
 | POST | `/` | Crear catálogo | superadmin, admin |
+| POST | `/bulk` | Carga masiva de catálogos | superadmin, admin |
 | PUT | `/:id` | Actualizar catálogo | superadmin, admin |
 
 ### Planillas (`/api/planillas`)
@@ -325,7 +327,7 @@ inventarios/
 │   │   │   └── reportes/         # reportes
 │   │   ├── services/             # api.js, auth.service.js, catalogos.service.js, barridos.service.js, planillas.service.js, conteos.service.js
 │   │   ├── styles/               # auth.css, dashboard.css
-│   │   └── utils/                # constants.js (API_BASE)
+│   │   └── utils/                # constants.js (API_BASE), csv.js (parseCSV)
 │   ├── public/assets/            # Logo personalizable (logo.png)
 │   └── dist/                     # Build output (deploy a GitHub Pages)
 ├── postman/                      # Colecciones Postman para testing

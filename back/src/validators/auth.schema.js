@@ -31,4 +31,10 @@ const passwordSchema = z.object({
   }),
 });
 
-module.exports = { signupSchema, loginSchema, refreshSchema, passwordSchema };
+const bulkSignupSchema = z.object({
+  body: z.object({
+    usuarios: z.array(signupSchema.shape.body).min(1, 'Debe incluir al menos un usuario'),
+  }),
+});
+
+module.exports = { signupSchema, loginSchema, refreshSchema, passwordSchema, bulkSignupSchema };

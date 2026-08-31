@@ -56,6 +56,15 @@ class AuthController {
       next(error);
     }
   }
+
+  async bulkSignup(req, res, next) {
+    try {
+      const result = await authService.bulkSignup(req.validated.body.usuarios);
+      return created(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthController();

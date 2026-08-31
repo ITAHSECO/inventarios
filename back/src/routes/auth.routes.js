@@ -1,9 +1,10 @@
 const { Router } = require('express');
 const authController = require('../controllers/auth.controller');
 const authenticateToken = require('../middleware/auth');
+const requireRole = require('../middleware/rbac');
 const validate = require('../middleware/validate');
 const { authLimiter } = require('../middleware/rateLimiter');
-const { signupSchema, loginSchema, refreshSchema, passwordSchema } = require('../validators/auth.schema');
+const { signupSchema, loginSchema, refreshSchema, passwordSchema, bulkSignupSchema } = require('../validators/auth.schema');
 
 const router = Router();
 
@@ -201,5 +202,60 @@ router.post('/refresh', validate(refreshSchema), authController.refresh);
  *         description: Contraseña actual incorrecta
  */
 router.put('/password', authenticateToken, validate(passwordSchema), authController.changePassword);
+
+/**
+ * @swagger
+ * /auth/bulk-signup:
+ *   post:
+ *     tags: [Auth]
+ *     summary: Carga masiva de usuarios
+ *     description: Crea múltiples usuarios en una sola operación. Si ocurre un error, revierte los creados exitosamente.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [usuarios]
+ *             properties:
+ *               usuarios:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required: [email, password, username, nombres, apellidos]
+ *                   properties:
+ *                     email:
+ *                       type: string
+ *                       format: email
+ *                     password:
+ *                       type: string
+ *                       minLength: 6
+ *                     username:
+ *                       type: string
+ *                       minLength: 3
+ *                       maxLength: 50
+ *                       pattern: '^[a-zA-Z0-9_.]+$'
+ *                     nombres:
+ *                       type: string
+ *                     apellidos:
+ *                       type: string
+ *                     rol:
+ *                       type: string
+ *                       enum: [superadmin, admin, inventariador, reportes]
+ *                       default: inventariador
+ *     responses:
+ *       201:
+ *         description: Usuarios creados exitosamente
+ *       400:
+ *         description: Error de validación o en una de las filas
+ *       401:
+ *         description: No autenticado
+ *       403:
+ *         description: No tiene permisos
+ */
+router.post('/bulk-signup', authenticateToken, requireRole('superadmin', 'admin'), authLimiter, validate(bulkSignupSchema), authController.bulkSignup);
 
 module.exports = router;

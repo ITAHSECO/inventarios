@@ -8,6 +8,7 @@ const {
   updateCatalogoSchema,
   catalogoIdParam,
   listCatalogosSchema,
+  bulkCreateCatalogoSchema,
 } = require('../validators/catalogos.schema');
 
 const router = Router();
@@ -147,6 +148,52 @@ router.get('/:id', validate(catalogoIdParam), catalogosController.getById);
  *         description: Ya existe un catálogo con estos datos
  */
 router.post('/', requireRole('superadmin', 'admin'), validate(createCatalogoSchema), catalogosController.create);
+
+/**
+ * @swagger
+ * /catalogos/bulk:
+ *   post:
+ *     tags: [Catálogos]
+ *     summary: Carga masiva de catálogos
+ *     description: Inserta múltiples registros de la maestra en una sola operación. Falla completa si hay duplicados.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [catalogos]
+ *             properties:
+ *               catalogos:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required: [id_tabla, id_elemento, descripcion]
+ *                   properties:
+ *                     id_tabla:
+ *                       type: string
+ *                       example: ALMACEN
+ *                     id_elemento:
+ *                       type: string
+ *                       example: ALM001
+ *                     descripcion:
+ *                       type: string
+ *                       example: Almacen Principal
+ *                     activo:
+ *                       type: boolean
+ *                       default: true
+ *     responses:
+ *       201:
+ *         description: Catálogos insertados
+ *       400:
+ *         description: Error de validación
+ *       409:
+ *         description: Conflicto con registros existentes
+ */
+router.post('/bulk', requireRole('superadmin', 'admin'), validate(bulkCreateCatalogoSchema), catalogosController.bulkCreate);
 
 /**
  * @swagger

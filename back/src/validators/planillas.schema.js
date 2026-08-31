@@ -50,9 +50,17 @@ const listPlanillasSchema = z.object({
   }),
 });
 
+const bulkCreatePlanillaSchema = z.object({
+  body: z.object({
+    barrido: z.string().min(1).max(100).transform((v) => v.toUpperCase().trim()),
+    planillas: z.array(createPlanillaSchema.shape.body).min(1, 'Debe incluir al menos una planilla'),
+  }),
+});
+
 module.exports = {
   createPlanillaSchema,
   updatePlanillaSchema,
   planillaIdParam,
   listPlanillasSchema,
+  bulkCreatePlanillaSchema,
 };

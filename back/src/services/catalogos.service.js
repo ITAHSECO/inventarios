@@ -105,6 +105,30 @@ class CatalogosService {
     if (!data) throw ApiError.notFound('Catalogo no encontrado');
     return data;
   }
+
+  async bulkCreate(catalogos, creadoPor) {
+    logger.info({ count: catalogos.length }, '[CatalogosService] Bulk create');
+    const rows = catalogos.map(c => ({
+      id_tabla: c.id_tabla.toUpperCase().trim(),
+      id_elemento: c.id_elemento.toUpperCase().trim(),
+      descripcion: c.descripcion,
+      activo: c.activo !== undefined ? c.activo : true,
+      creado_por: creadoPor || null,
+    }));
+
+    const { data, error } = await supabaseAdmin
+      .from('maestra_parametros')
+      .insert(rows)
+      .select();
+
+    if (error) {
+      if (error.code === '23505') {
+        throw ApiError.conflict('Uno o mas catalogos ya existen (conflicto en id_tabla + id_elemento)');
+      }
+      throw ApiError.internal(error.message);
+    }
+    return { inserted: data.length, data };
+  }
 }
 
 module.exports = new CatalogosService();

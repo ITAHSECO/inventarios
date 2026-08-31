@@ -8,6 +8,7 @@ const {
   updatePlanillaSchema,
   planillaIdParam,
   listPlanillasSchema,
+  bulkCreatePlanillaSchema,
 } = require('../validators/planillas.schema');
 
 const router = Router();
@@ -176,7 +177,7 @@ router.post('/', requireRole('superadmin', 'admin'), validate(createPlanillaSche
  *       201:
  *         description: Planillas insertadas
  */
-router.post('/bulk', requireRole('superadmin', 'admin'), planillasController.bulkCreate);
+router.post('/bulk', requireRole('superadmin', 'admin'), validate(bulkCreatePlanillaSchema), planillasController.bulkCreate);
 
 /**
  * @swagger

@@ -6,4 +6,5 @@ export const authService = {
   me: () => api.get('/auth/me'),
   logout: () => api.post('/auth/logout'),
   refreshToken: (refresh_token) => api.post('/auth/refresh', { refresh_token }),
+  bulkSignup: (usuarios) => api.post('/auth/bulk-signup', { usuarios }),
 };

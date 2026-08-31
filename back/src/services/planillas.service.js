@@ -1,5 +1,6 @@
 const { supabaseAdmin } = require('../config/supabase');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 class PlanillasService {
   async list({ page, limit, barrido, id_alm, search }) {
@@ -45,13 +46,30 @@ class PlanillasService {
     return data;
   }
 
-  async bulkCreate(planillas) {
+  async bulkCreate(barrido, planillas) {
+    logger.info({ barrido, count: planillas.length }, '[PlanillasService] Bulk create');
+    const rows = planillas.map(p => ({
+      barrido: barrido.toUpperCase().trim(),
+      id_alm: p.id_alm ? p.id_alm.toUpperCase().trim() : null,
+      id_marca: p.id_marca ? p.id_marca.toUpperCase().trim() : null,
+      id_categoria: p.id_categoria ? p.id_categoria.toUpperCase().trim() : null,
+      codigo: p.codigo ? p.codigo.toUpperCase().trim() : null,
+      cod_fab: p.cod_fab || null,
+      existencia: p.existencia || 0,
+      articulo: p.articulo || null,
+      cunidad: p.cunidad || null,
+      serie_lote: p.serie_lote || '-',
+      vcto: p.vcto || null,
+      maneja_serie_lote: p.maneja_serie_lote || false,
+    }));
+
     const { data, error } = await supabaseAdmin
       .from('planillasInventario')
-      .insert(planillas)
+      .insert(rows)
       .select();
 
     if (error) throw ApiError.internal(error.message);
+    logger.info({ inserted: data.length }, '[PlanillasService] Bulk create completed');
     return { inserted: data.length, data };
   }
 

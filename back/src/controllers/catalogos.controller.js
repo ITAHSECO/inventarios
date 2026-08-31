@@ -58,6 +58,15 @@ class CatalogosController {
       next(error);
     }
   }
+
+  async bulkCreate(req, res, next) {
+    try {
+      const result = await catalogosService.bulkCreate(req.validated.body.catalogos, req.user.id);
+      return created(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new CatalogosController();

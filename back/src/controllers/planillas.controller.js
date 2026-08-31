@@ -31,7 +31,8 @@ class PlanillasController {
 
   async bulkCreate(req, res, next) {
     try {
-      const result = await planillasService.bulkCreate(req.body.planillas || req.body);
+      const { barrido, planillas } = req.validated.body;
+      const result = await planillasService.bulkCreate(barrido, planillas);
       return created(res, result);
     } catch (error) {
       next(error);

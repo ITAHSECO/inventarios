@@ -35,9 +35,16 @@ const listCatalogosSchema = z.object({
   }),
 });
 
+const bulkCreateCatalogoSchema = z.object({
+  body: z.object({
+    catalogos: z.array(createCatalogoSchema.shape.body).min(1, 'Debe incluir al menos un catalogo'),
+  }),
+});
+
 module.exports = {
   createCatalogoSchema,
   updateCatalogoSchema,
   catalogoIdParam,
   listCatalogosSchema,
+  bulkCreateCatalogoSchema,
 };

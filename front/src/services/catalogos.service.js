@@ -16,4 +16,5 @@ export const catalogosService = {
   getById: (id) => api.get(`/catalogos/${id}`),
   create: (data) => api.post('/catalogos', data),
   update: (id, data) => api.put(`/catalogos/${id}`, data),
+  bulkCreate: (catalogos) => api.post('/catalogos/bulk', { catalogos }),
 };
