@@ -49,6 +49,7 @@ router.use(authenticateToken);
  *         name: search
  *         schema:
  *           type: string
+ *         description: Búsqueda exacta por código/cod_fab, ilike por descripción
  *     responses:
  *       200:
  *         description: Lista de planillas

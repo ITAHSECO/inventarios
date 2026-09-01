@@ -194,9 +194,18 @@ async function searchCodigo(codigo) {
     const result = await planillasService.list({ barrido: currentBarrido, search: codigo, limit: 10 });
     const matches = result.data || [];
 
-    const exactCodigo = matches.find(p => p.codigo && p.codigo.toUpperCase() === codigo.toUpperCase());
-    const exactFab = matches.find(p => p.cod_fab && p.cod_fab.toUpperCase() === codigo.toUpperCase());
-    const match = exactCodigo || exactFab || matches[0];
+    const uniqueByCodigo = [];
+    const seenCodigos = new Set();
+    for (const p of matches) {
+      if (!seenCodigos.has(p.codigo)) {
+        seenCodigos.add(p.codigo);
+        uniqueByCodigo.push(p);
+      }
+    }
+
+    const exactCodigo = uniqueByCodigo.find(p => p.codigo && p.codigo.toUpperCase() === codigo.toUpperCase());
+    const exactFab = uniqueByCodigo.find(p => p.cod_fab && p.cod_fab.toUpperCase() === codigo.toUpperCase());
+    const match = exactCodigo || exactFab || uniqueByCodigo[0];
 
     if (match && (exactCodigo || exactFab || matches.length === 1)) {
       datalist.innerHTML = '';

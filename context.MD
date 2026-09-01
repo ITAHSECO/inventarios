@@ -244,6 +244,8 @@ El backend usa **dos clientes** Supabase por request:
 
 **NOTA bulk planillas:** El body es `{ "barrido": "BARRIDO-001", "planillas": [{ "id_alm": "...", "codigo": "...", ... }] }`. El `barrido` se envía UNA sola vez en el nivel superior, no por cada item.
 
+**NOTA búsqueda planillas:** La búsqueda usa `eq` (exacto) para `codigo` y `cod_fab`, e `ilike` para `descripcion`. Evita duplicados al buscar por código.
+
 ### Barridos (`/api/barridos`)
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
