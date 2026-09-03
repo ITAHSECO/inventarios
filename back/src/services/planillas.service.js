@@ -19,8 +19,7 @@ class PlanillasService {
     if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
     if (id_alm) query = query.eq('id_alm', id_alm.toUpperCase().trim());
     if (search) {
-      const s = search.toUpperCase().trim();
-      query = query.or(`codigo.eq.${s},cod_fab.eq.${s},descripcion.ilike.%${s}%`);
+      query = query.or(`codigo.ilike.%${search}%,descripcion.ilike.%${search}%,cod_fab.ilike.%${search}%`);
     }
 
     const from = (page - 1) * limit;
