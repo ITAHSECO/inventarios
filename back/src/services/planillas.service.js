@@ -31,7 +31,20 @@ class PlanillasService {
       .range(from, to);
 
     if (error) throw ApiError.internal(error.message);
-    return { data, total: count };
+
+    // Deduplicar por codigo cuando hay busqueda (mismo articulo, distinto almacén/serie)
+    let deduped = data;
+    if (search && data.length > 0) {
+      const seen = new Map();
+      for (const row of data) {
+        if (!seen.has(row.codigo)) {
+          seen.set(row.codigo, row);
+        }
+      }
+      deduped = [...seen.values()];
+    }
+
+    return { data: deduped, total: count };
   }
 
   async getById(id) {
