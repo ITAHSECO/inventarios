@@ -244,6 +244,8 @@ El backend usa **dos clientes** Supabase por request:
 
 **NOTA bulk planillas:** El body es `{ "barrido": "BARRIDO-001", "planillas": [{ "id_alm": "...", "codigo": "...", ... }] }`. El `barrido` se envía UNA sola vez en el nivel superior, no por cada item.
 
+**NOTA búsqueda planillas:** La búsqueda usa `ilike` para `codigo`, `descripcion` y `cod_fab`. Los resultados se deduplican por `codigo` para evitar mostrar el mismo artículo múltiples veces (por distintos almacenes o series/lotes).
+
 **NOTA búsqueda planillas:** La búsqueda usa `eq` (exacto) para `codigo` y `cod_fab`, e `ilike` para `descripcion`. Evita duplicados al buscar por código.
 
 ### Barridos (`/api/barridos`)
@@ -360,6 +362,7 @@ inventarios/
 │   └── Inventarios_API.postman_collection.json
 └── utiles/                       # Utilidades de soporte
     ├── keep_alive.py             # Script para mantener Render activo
+    ├── exportar_planilla.py      # Exporta inventario SQL Server 2014 → CSV para carga masiva
     └── requirements.txt
 ```
 
