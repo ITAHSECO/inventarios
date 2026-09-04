@@ -19,8 +19,7 @@ class PlanillasService {
     if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
     if (id_alm) query = query.eq('id_alm', id_alm.toUpperCase().trim());
     if (search) {
-      const s = search.toUpperCase().trim();
-      query = query.or(`codigo.eq.${s},cod_fab.eq.${s},descripcion.ilike.%${s}%`);
+      query = query.or(`codigo.ilike.%${search}%,descripcion.ilike.%${search}%,cod_fab.ilike.%${search}%`);
     }
 
     const from = (page - 1) * limit;
@@ -32,7 +31,20 @@ class PlanillasService {
       .range(from, to);
 
     if (error) throw ApiError.internal(error.message);
-    return { data, total: count };
+
+    // Deduplicar por codigo cuando hay busqueda (mismo articulo, distinto almacén/serie)
+    let deduped = data;
+    if (search && data.length > 0) {
+      const seen = new Map();
+      for (const row of data) {
+        if (!seen.has(row.codigo)) {
+          seen.set(row.codigo, row);
+        }
+      }
+      deduped = [...seen.values()];
+    }
+
+    return { data: deduped, total: count };
   }
 
   async getById(id) {

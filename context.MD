@@ -155,7 +155,8 @@ back/
 ├── migrations/                   # Scripts SQL de migración
 │   ├── 001_full_schema.sql       # Schema completo inicial
 │   ├── 002_rename_articulo_to_descripcion.sql
-│   └── 003_add_barrido_id_to_conteos.sql  # barrido_id FK, drop planilla_id, widen cunidad
+│   ├── 003_add_barrido_id_to_conteos.sql  # barrido_id FK, drop planilla_id, widen cunidad
+│   └── 004_recreate_vw_resumen_diferencias.sql  # Recrea vista rota (join por barrido+codigo)
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -243,6 +244,8 @@ El backend usa **dos clientes** Supabase por request:
 | DELETE | `/:id` | Eliminar planilla | superadmin |
 
 **NOTA bulk planillas:** El body es `{ "barrido": "BARRIDO-001", "planillas": [{ "id_alm": "...", "codigo": "...", ... }] }`. El `barrido` se envía UNA sola vez en el nivel superior, no por cada item.
+
+**NOTA búsqueda planillas:** La búsqueda usa `ilike` para `codigo`, `descripcion` y `cod_fab`. Los resultados se deduplican por `codigo` para evitar mostrar el mismo artículo múltiples veces (por distintos almacenes o series/lotes).
 
 **NOTA búsqueda planillas:** La búsqueda usa `eq` (exacto) para `codigo` y `cod_fab`, e `ilike` para `descripcion`. Evita duplicados al buscar por código.
 
@@ -339,7 +342,8 @@ inventarios/
 │   ├── migrations/               # Scripts SQL de migración
 │   │   ├── 001_full_schema.sql
 │   │   ├── 002_rename_articulo_to_descripcion.sql
-│   │   └── 003_add_barrido_id_to_conteos.sql
+│   │   ├── 003_add_barrido_id_to_conteos.sql
+│   │   └── 004_recreate_vw_resumen_diferencias.sql
 │   └── src/                      # Código fuente
 ├── front/                        # Frontend (Vite + vanilla JS, deploy GitHub Pages)
 │   ├── src/
@@ -360,6 +364,7 @@ inventarios/
 │   └── Inventarios_API.postman_collection.json
 └── utiles/                       # Utilidades de soporte
     ├── keep_alive.py             # Script para mantener Render activo
+    ├── exportar_planilla.py      # Exporta inventario SQL Server 2014 → CSV para carga masiva
     └── requirements.txt
 ```
 
@@ -502,4 +507,6 @@ Para reconstruir la base de datos completa, ejecutar en orden:
    - Agrega columna `barrido_id` (BIGINT, FK → `barridos.id`, ON DELETE SET NULL)
    - Amplía `cunidad` de VARCHAR(20) a VARCHAR(50) en `captura_inventario_conteos` y `planillasinventario`
 
-**IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa. Las migraciones 002 y 003 son incrementales y seguras para producción.
+4. **`back/migrations/004_recreate_vw_resumen_diferencias.sql`** — Recrea la vista `vw_resumen_diferencias_inventario` que quedó rota tras la migración 003. El nuevo join es por `barrido+codigo` en lugar de `planilla_id`.
+
+**IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa. Las migraciones 002, 003 y 004 son incrementales y seguras para producción.
