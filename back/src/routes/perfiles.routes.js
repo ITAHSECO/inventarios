@@ -252,4 +252,30 @@ router.put('/:id/pin', requireRole('superadmin', 'admin'), validate(pinSchema), 
  */
 router.post('/validate-pin', requireRole('superadmin', 'admin'), validate(validatePinSchema), perfilesController.validatePin);
 
+/**
+ * @swagger
+ * /perfiles/{id}:
+ *   delete:
+ *     tags: [Perfiles]
+ *     summary: Eliminar usuario
+ *     description: Elimina el usuario de Supabase Auth y su perfil. Solo superadmin.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Usuario eliminado
+ *       403:
+ *         description: Solo superadmin
+ *       404:
+ *         description: Perfil no encontrado
+ */
+router.delete('/:id', requireRole('superadmin'), validate(perfilIdParam), perfilesController.delete);
+
 module.exports = router;

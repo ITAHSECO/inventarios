@@ -16,5 +16,6 @@ export const perfilesService = {
   getById: (id) => api.get(`/perfiles/${id}`),
   create: (data) => api.post('/perfiles', data),
   update: (id, data) => api.put(`/perfiles/${id}`, data),
+  delete: (id) => api.delete(`/perfiles/${id}`),
   setPin: (id, pin) => api.put(`/perfiles/${id}/pin`, { pin }),
 };

@@ -58,6 +58,15 @@ class PerfilesController {
       next(error);
     }
   }
+
+  async delete(req, res, next) {
+    try {
+      await perfilesService.delete(req.validated.params.id);
+      return success(res, { message: 'Usuario eliminado exitosamente' });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new PerfilesController();

@@ -140,6 +140,7 @@ async function loadUsuarios() {
               <td class="actions-cell">
                 <button class="btn-icon" title="Editar" onclick="window._editUser('${u.id}')">&#9998;</button>
                 <button class="btn-icon ${u.activo ? 'btn-warn' : 'btn-success'}" title="${u.activo ? 'Desactivar' : 'Activar'}" onclick="window._toggleUser('${u.id}', ${u.activo})">${u.active ? '&#10005;' : '&#10003;'}</button>
+                <button class="btn-icon btn-danger" title="Eliminar" onclick="window._deleteUser('${u.id}', '${u.username}')">&#128465;</button>
               </td>
             </tr>
           `).join('')}
@@ -170,6 +171,18 @@ function bindRowActions(data) {
       loadUsuarios();
     } catch (err) {
       console.error('[Usuarios] Toggle failed:', err.message);
+      alert('Error: ' + err.message);
+    }
+  };
+  window._deleteUser = async (id, username) => {
+    if (!confirm(`Seguro que desea eliminar al usuario "${username}"? Esta accion no se puede deshacer.`)) return;
+    try {
+      console.log('[Usuarios] Deleting user:', id, username);
+      await perfilesService.delete(id);
+      console.log('[Usuarios] Delete success');
+      loadUsuarios();
+    } catch (err) {
+      console.error('[Usuarios] Delete failed:', err.message);
       alert('Error: ' + err.message);
     }
   };

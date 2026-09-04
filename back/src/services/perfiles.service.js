@@ -99,6 +99,26 @@ class PerfilesService {
     if (error) throw ApiError.internal('Error al validar PIN');
     return data;
   }
+
+  async delete(id) {
+    const { data: existing } = await supabaseAdmin
+      .from('perfiles')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (!existing) throw ApiError.notFound('Perfil no encontrado');
+
+    const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+    if (authError) throw ApiError.internal('Error al eliminar usuario de auth: ' + authError.message);
+
+    const { error } = await supabaseAdmin
+      .from('perfiles')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw ApiError.internal('Error al eliminar perfil: ' + error.message);
+  }
 }
 
 module.exports = new PerfilesService();

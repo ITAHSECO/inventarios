@@ -244,6 +244,8 @@
 .btn-warn:hover { background: #fef2f2; }
 .btn-success { color: var(--success); border-color: #bbf7d0; }
 .btn-success:hover { background: #f0fdf4; }
+.btn-danger { color: var(--error); border-color: #fecaca; }
+.btn-danger:hover { background: #fef2f2; }
 
 .badge {
   display: inline-block;

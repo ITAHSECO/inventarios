@@ -214,6 +214,7 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/:id` | Obtener perfil | Autenticado |
 | POST | `/` | Crear perfil | superadmin |
 | PUT | `/:id` | Actualizar perfil | superadmin, admin |
+| DELETE | `/:id` | Eliminar usuario (auth + perfil) | superadmin |
 | PUT | `/:id/pin` | Establecer PIN | superadmin, admin |
 | POST | `/validate-pin` | Validar PIN | superadmin, admin |
 
