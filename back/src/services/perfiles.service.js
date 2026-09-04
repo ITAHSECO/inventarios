@@ -109,6 +109,16 @@ class PerfilesService {
 
     if (!existing) throw ApiError.notFound('Perfil no encontrado');
 
+    await supabaseAdmin.from('barrido_usuarios').delete().eq('usuario_id', id);
+
+    await supabaseAdmin.from('captura_inventario_conteos').update({ inventariador_id: null }).eq('inventariador_id', id);
+    await supabaseAdmin.from('captura_inventario_conteos').update({ supervisor_id: null }).eq('supervisor_id', id);
+
+    await supabaseAdmin.from('barridos').update({ creado_por: null }).eq('creado_por', id);
+    await supabaseAdmin.from('planillasinventario').update({ creado_por: null }).eq('creado_por', id);
+    await supabaseAdmin.from('maestra_parametros').update({ creado_por: null }).eq('creado_por', id);
+    await supabaseAdmin.from('barrido_usuarios').update({ asignado_por: null }).eq('asignado_por', id);
+
     const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
     if (authError) throw ApiError.internal('Error al eliminar usuario de auth: ' + authError.message);
 
