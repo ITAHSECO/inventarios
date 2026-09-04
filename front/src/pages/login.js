@@ -18,7 +18,10 @@ export async function renderLogin(container) {
 
           <div class="form-group">
             <label for="password">Contrasena</label>
-            <input type="password" id="password" name="password" required placeholder="Tu contrasena">
+            <div class="password-wrapper">
+              <input type="password" id="password" name="password" required placeholder="Tu contrasena">
+              <button type="button" class="password-toggle" id="togglePassword" aria-label="Mostrar contrasena">&#128065;</button>
+            </div>
           </div>
 
           <div id="formError" class="form-error" style="display:none;"></div>
@@ -33,6 +36,13 @@ export async function renderLogin(container) {
   `;
 
   document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+  document.getElementById('togglePassword').addEventListener('click', () => {
+    const input = document.getElementById('password');
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    document.getElementById('togglePassword').innerHTML = isPassword ? '&#128064;' : '&#128065;';
+  });
 }
 
 async function handleLogin(e) {
