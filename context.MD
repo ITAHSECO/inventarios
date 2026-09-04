@@ -215,6 +215,8 @@ El backend usa **dos clientes** Supabase por request:
 | POST | `/` | Crear perfil | superadmin |
 | PUT | `/:id` | Actualizar perfil | superadmin, admin |
 | DELETE | `/:id` | Eliminar usuario (auth + perfil) | superadmin |
+
+**NOTA delete usuario:** Limpia referencias FK en conteos, barridos, planillas y maestra antes de eliminar. Los conteos del usuario quedan con `inventariador_id = NULL`.
 | PUT | `/:id/pin` | Establecer PIN | superadmin, admin |
 | POST | `/validate-pin` | Validar PIN | superadmin, admin |
 
