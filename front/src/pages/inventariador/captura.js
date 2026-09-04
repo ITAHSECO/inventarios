@@ -218,17 +218,8 @@ async function searchCodigo(codigo) {
         unidadSelect.value = match.cunidad;
       }
 
-      if (match.maneja_serie_lote) {
-        document.getElementById('serieLoteGroup').style.display = 'block';
-        document.getElementById('f_serie_lote').required = true;
-        document.getElementById('f_serie_lote').value = match.serie_lote || '';
-      } else {
-        clearSerieLote();
-      }
-
-      if (match.vcto) {
-        document.getElementById('f_vcto').value = match.vcto;
-      }
+      clearSerieLote();
+      document.getElementById('f_vcto').value = '';
 
       statusEl.textContent = `Encontrado: ${match.codigo} - ${match.descripcion}`;
       statusEl.className = 'field-hint field-hint-ok';
