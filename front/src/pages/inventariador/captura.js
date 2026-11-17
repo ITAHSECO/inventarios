@@ -221,6 +221,11 @@ async function searchCodigo(codigo) {
       clearSerieLote();
       document.getElementById('f_vcto').value = '';
 
+      if (match.maneja_serie_lote) {
+        document.getElementById('serieLoteGroup').style.display = 'block';
+        document.getElementById('f_serie_lote').required = true;
+      }
+
       statusEl.textContent = `Encontrado: ${match.codigo} - ${match.descripcion}`;
       statusEl.className = 'field-hint field-hint-ok';
     } else if (matches.length > 1) {
