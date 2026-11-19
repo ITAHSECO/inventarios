@@ -89,12 +89,12 @@ export async function renderCaptura(container) {
                 <input type="number" id="f_conteo" required min="0" step="0.0001" placeholder="0">
               </div>
             </div>
-            <div class="form-row">
-              <div class="form-group" id="serieLoteGroup" style="display:none;">
+            <div class="form-row" id="loteVctoRow" style="display:none;">
+              <div class="form-group" id="serieLoteGroup">
                 <label for="f_serie_lote">Lote/Serie</label>
                 <input type="text" id="f_serie_lote" maxlength="100" placeholder="Serie o lote">
               </div>
-              <div class="form-group">
+              <div class="form-group" id="vctoGroup">
                 <label for="f_vcto">Vencimiento</label>
                 <input type="date" id="f_vcto">
               </div>
@@ -222,7 +222,7 @@ async function searchCodigo(codigo) {
       document.getElementById('f_vcto').value = '';
 
       if (match.maneja_serie_lote) {
-        document.getElementById('serieLoteGroup').style.display = 'block';
+        document.getElementById('loteVctoRow').style.display = 'flex';
         document.getElementById('f_serie_lote').required = true;
       }
 
@@ -261,7 +261,7 @@ async function searchCodigo(codigo) {
 }
 
 function clearSerieLote() {
-  document.getElementById('serieLoteGroup').style.display = 'none';
+  document.getElementById('loteVctoRow').style.display = 'none';
   document.getElementById('f_serie_lote').required = false;
   document.getElementById('f_serie_lote').value = '';
 }

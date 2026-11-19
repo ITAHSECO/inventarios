@@ -68,6 +68,8 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `supervisor_id` (UUID, FK `public.perfiles.id`, NULL)
 - `observacion` (VARCHAR(255), NULL)
 - `inventariador_id` (UUID, FK `public.perfiles.id`, NOT NULL)
+- `almacen` (VARCHAR(100), NULL) -> Almacen fisico capturado en campo (agregado por script `auto_005`)
+- `marca` (VARCHAR(100), NULL) -> Marca capturada en campo (agregado por script `auto_005`)
 - `created_at`, `updated_at` (TIMESTAMPTZ)
 
 ### E. `public.barridos` (Cabeceras de Campaña de Inventario)
@@ -156,7 +158,8 @@ back/
 │   ├── 001_full_schema.sql       # Schema completo inicial
 │   ├── 002_rename_articulo_to_descripcion.sql
 │   ├── 003_add_barrido_id_to_conteos.sql  # barrido_id FK, drop planilla_id, widen cunidad
-│   └── 004_recreate_vw_resumen_diferencias.sql  # Recrea vista rota (join por barrido+codigo)
+│   ├── 004_recreate_vw_resumen_diferencias.sql  # Recrea vista rota (join por barrido+codigo)
+│   └── auto_005_add_almacen_marca_to_conteos.sql  # AUTO: agrega almacen y marca a conteos
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -399,6 +402,12 @@ inventarios/
 - Enviar `Authorization: Bearer <access_token>` en cada request
 - Refrescar el token antes de que expire (usa el endpoint `/api/auth/refresh`)
 
+### Captura - Campos Serie/Lote y Vencimiento
+- La fila `#loteVctoRow` (contiene **Lote/Serie** `#f_serie_lote` y **Vencimiento** `#f_vcto`) permanece oculta por defecto.
+- Se muestra **solo** cuando el artículo encontrado en la planilla tiene `maneja_serie_lote = true`; en ese caso `f_serie_lote` se marca `required = true`.
+- En cualquier otro caso (múltiples coincidencias, código no encontrado, error, reset o cambio de barrido) se oculta vía `clearSerieLote()`.
+- El backend rechaza el conteo si `maneja_serie_lote = TRUE` y el `serie_lote` viene vacío o `'-'` (trigger `trg_conteos_validar_serie_lote`).
+
 ### Logging
 - Frontend: `console.log/warn/error` con prefijo `[API]`, `[Login]`, `[Registro]`, `[Dashboard]`, `[Router]`
 - Backend: Pino logger con prefijo `[AuthService]`, `[CatalogosService]`, `[Auth]`
@@ -513,3 +522,26 @@ Para reconstruir la base de datos completa, ejecutar en orden:
 4. **`back/migrations/004_recreate_vw_resumen_diferencias.sql`** — Recrea la vista `vw_resumen_diferencias_inventario` que quedó rota tras la migración 003. El nuevo join es por `barrido+codigo` en lugar de `planilla_id`.
 
 **IMPORTANTE:** El script `001_full_schema.sql` elimina y recrea todas las tablas. Solo usar en entorno de desarrollo o para reconstrucción completa. Las migraciones 002, 003 y 004 son incrementales y seguras para producción.
+
+---
+
+## 14. SCRIPTS AUTOMÁTICOS (prefijo `auto_`)
+
+Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **automáticamente por el asistente** (no requieren ejecución manual). Los scripts sin ese prefijo (`001`…`004`) son los que el desarrollador debe ejecutar a mano.
+
+| Script | Estado | Descripción |
+|--------|--------|-------------|
+| `auto_005_add_almacen_marca_to_conteos.sql` | ✅ Aplicado | Agrega columnas `almacen VARCHAR(100)` y `marca VARCHAR(100)` a `captura_inventario_conteos` |
+
+**Convención:** toda acción sobre la base de datos (aunque se ejecute directamente por consola) debe dejar su script `auto_*` correspondiente en `back/migrations/`.
+
+### Acceso directo a la BD (psql)
+- Cliente instalado: `C:\Program Files\PostgreSQL\17\bin\psql.exe` (PostgreSQL 17.12)
+- Conexión: `psql -h db.mgapfghsthvkxgpslgic.supabase.co -p 5432 -U postgres -d postgres` (password en sección 6)
+
+### ⚠️ PENDIENTE: la BD de producción no refleja las migraciones 003/004
+Verificado el 2026-11-19 directamente contra la BD:
+- `captura_inventario_conteos` **aún tiene la columna `planilla_id`** (la migración 003 debió eliminarla), aunque `barrido_id` sí existe y `cunidad` sí tiene 50 chars.
+- El trigger `trg_conteos_validar_serie_lote` valida con `WHERE id = NEW.planilla_id`. Como el backend ya **no envía** `planilla_id` (es NULL), la validación de serie/lote **queda anulada** en producción.
+- La vista `vw_resumen_diferencias_inventario` aún hace `JOIN ... ON c.planilla_id = p.id` (versión 001), no la de la migración 004 (`barrido+codigo`). Como los conteos nuevos tienen `planilla_id = NULL`, **no aparecen en los reportes**.
+- **Acción requerida:** aplicar las migraciones 003 y 004 (o un script `auto_006` equivalente) para eliminar `planilla_id`, redefinir el trigger sobre `barrido_id`+`codigo` y recrear la vista.
