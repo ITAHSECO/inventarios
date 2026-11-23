@@ -110,10 +110,10 @@ export async function renderCaptura(container) {
               </div>
               <div class="form-group" id="grp_marca">
                 <label for="f_marca">Marca</label>
-                <select id="f_marca">
-                  <option value="">Seleccione...</option>
-                  ${marcas.map(m => `<option value="${m.id_elemento}">${m.id_elemento} - ${m.descripcion}</option>`).join('')}
-                </select>
+                <input type="text" id="f_marca" maxlength="100" list="marca-options" autocomplete="off" placeholder="Escriba o seleccione la marca...">
+                <datalist id="marca-options">
+                  ${marcas.map(m => `<option value="${m.descripcion}">${m.id_elemento}</option>`).join('')}
+                </datalist>
               </div>
             </div>
             <div class="form-row" id="loteVctoRow" style="display:none;">
