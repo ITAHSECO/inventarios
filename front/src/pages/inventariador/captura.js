@@ -6,6 +6,8 @@ import { configCapturaService } from '../../services/configcaptura.service.js';
 
 let barridos = [];
 let unidades = [];
+let almacenes = [];
+let marcas = [];
 let currentBarrido = '';
 let currentBarridoId = null;
 let searchTimer = null;
@@ -20,15 +22,19 @@ export async function renderCaptura(container) {
   const user = getUser();
 
   try {
-    const [barridosRes, unidadesRes, configRes] = await Promise.all([
+    const [barridosRes, unidadesRes, configRes, almacenesRes, marcasRes] = await Promise.all([
       barridosService.getMisBarridos(),
       catalogosService.getActivos('CUNIDAD'),
       configCapturaService.getAll(),
+      catalogosService.getActivos('ALMACEN'),
+      catalogosService.getActivos('MARCA'),
     ]);
     barridos = barridosRes.data || [];
     unidades = unidadesRes.data || [];
     fieldConfig = configRes.data || [];
-  } catch { barridos = []; unidades = []; fieldConfig = []; }
+    almacenes = almacenesRes.data || [];
+    marcas = marcasRes.data || [];
+  } catch { barridos = []; unidades = []; fieldConfig = []; almacenes = []; marcas = []; }
 
   container.innerHTML = `
     <div class="dashboard">
@@ -97,11 +103,17 @@ export async function renderCaptura(container) {
             <div class="form-row">
               <div class="form-group" id="grp_almacen">
                 <label for="f_almacen">Almacen</label>
-                <input type="text" id="f_almacen" maxlength="100" placeholder="Ej: ALM-01">
+                <select id="f_almacen">
+                  <option value="">Seleccione...</option>
+                  ${almacenes.map(a => `<option value="${a.id_elemento}">${a.id_elemento} - ${a.descripcion}</option>`).join('')}
+                </select>
               </div>
               <div class="form-group" id="grp_marca">
                 <label for="f_marca">Marca</label>
-                <input type="text" id="f_marca" maxlength="100" placeholder="Ej: BAYER">
+                <select id="f_marca">
+                  <option value="">Seleccione...</option>
+                  ${marcas.map(m => `<option value="${m.id_elemento}">${m.id_elemento} - ${m.descripcion}</option>`).join('')}
+                </select>
               </div>
             </div>
             <div class="form-row" id="loteVctoRow" style="display:none;">

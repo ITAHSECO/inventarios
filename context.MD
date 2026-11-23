@@ -292,7 +292,9 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
 
-**NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen` y `marca` (VARCHAR(100), opcionales; se guardan en MAYÚSCULAS vía trigger).
+**NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen` y `marca` (VARCHAR(100), opcionales).
+
+**NOTA almacen/marca en captura:** Son `<select>` (combobox nativos) cargados de `maestra_parametros` vía `GET /api/catalogos/activos?id_tabla=ALMACEN` (13 elem.) y `?id_tabla=MARCA` (334 elem.). El `value` de cada opción es **`id_elemento`** (el código, ej. `0001`, `A0770`) y el texto visible es `id_elemento - descripcion`. Se guarda el **código**, igual que `planillasinventario.id_alm`/`id_marca`, para poder cruzar conteos con la planilla después.
 
 ### Reportes (`/api/reportes`)
 | Método | Ruta | Descripción | Roles |
