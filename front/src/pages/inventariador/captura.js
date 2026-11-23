@@ -2,12 +2,15 @@ import { barridosService } from '../../services/barridos.service.js';
 import { catalogosService } from '../../services/catalogos.service.js';
 import { conteosService } from '../../services/conteos.service.js';
 import { planillasService } from '../../services/planillas.service.js';
+import { configCapturaService } from '../../services/configcaptura.service.js';
 
 let barridos = [];
 let unidades = [];
 let currentBarrido = '';
 let currentBarridoId = null;
 let searchTimer = null;
+let fieldConfig = [];   // Config de campos del formulario (admin)
+let serieLoteRequerido = false;  // El articulo actual maneja serie/lote
 
 function getUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
@@ -17,13 +20,15 @@ export async function renderCaptura(container) {
   const user = getUser();
 
   try {
-    const [barridosRes, unidadesRes] = await Promise.all([
+    const [barridosRes, unidadesRes, configRes] = await Promise.all([
       barridosService.getMisBarridos(),
       catalogosService.getActivos('CUNIDAD'),
+      configCapturaService.getAll(),
     ]);
     barridos = barridosRes.data || [];
     unidades = unidadesRes.data || [];
-  } catch { barridos = []; unidades = []; }
+    fieldConfig = configRes.data || [];
+  } catch { barridos = []; unidades = []; fieldConfig = []; }
 
   container.innerHTML = `
     <div class="dashboard">
@@ -61,13 +66,13 @@ export async function renderCaptura(container) {
           <h2 class="section-title">Registrar Conteo</h2>
           <form id="captureForm" novalidate>
             <div class="form-row">
-              <div class="form-group">
+              <div class="form-group" id="grp_codigo">
                 <label for="f_codigo">Codigo</label>
                 <input type="text" id="f_codigo" maxlength="50" placeholder="Buscar por codigo o cod.fab..." list="codigo-options">
                 <datalist id="codigo-options"></datalist>
                 <small id="codigoStatus" class="field-hint"></small>
               </div>
-              <div class="form-group">
+              <div class="form-group" id="grp_unidad">
                 <label for="f_unidad">Unidad *</label>
                 <select id="f_unidad" required>
                   <option value="">Seleccione...</option>
@@ -75,18 +80,28 @@ export async function renderCaptura(container) {
                 </select>
               </div>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="grp_descripcion">
               <label for="f_descripcion">Descripcion</label>
               <input type="text" id="f_descripcion" maxlength="255" placeholder="Se autollena si el codigo existe, o escriba manualmente">
             </div>
             <div class="form-row">
-              <div class="form-group">
+              <div class="form-group" id="grp_ubicacion">
                 <label for="f_ubicacion">Ubicacion *</label>
                 <input type="text" id="f_ubicacion" required maxlength="100" placeholder="Ej: ESTANTE-A1">
               </div>
-              <div class="form-group">
+              <div class="form-group" id="grp_conteo">
                 <label for="f_conteo">Conteo *</label>
                 <input type="number" id="f_conteo" required min="0" step="0.0001" placeholder="0">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" id="grp_almacen">
+                <label for="f_almacen">Almacen</label>
+                <input type="text" id="f_almacen" maxlength="100" placeholder="Ej: ALM-01">
+              </div>
+              <div class="form-group" id="grp_marca">
+                <label for="f_marca">Marca</label>
+                <input type="text" id="f_marca" maxlength="100" placeholder="Ej: BAYER">
               </div>
             </div>
             <div class="form-row" id="loteVctoRow" style="display:none;">
@@ -99,7 +114,7 @@ export async function renderCaptura(container) {
                 <input type="date" id="f_vcto">
               </div>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="grp_observacion">
               <label for="f_observacion">Nota</label>
               <input type="text" id="f_observacion" maxlength="255" placeholder="Opcional">
             </div>
@@ -122,6 +137,121 @@ export async function renderCaptura(container) {
   `;
 
   bindEvents();
+  applyFieldConfig();
+}
+
+// ------------------------------------------------------------
+// Config de campos (gestionada por admin en #/admin/config-captura)
+// ------------------------------------------------------------
+function cfgDe(campo) {
+  return fieldConfig.find(c => c.campo === campo) || null;
+}
+
+function applyFieldConfig() {
+  if (!fieldConfig.length) return;
+
+  const GRUPOS = {
+    codigo: 'grp_codigo',
+    unidad: 'grp_unidad',
+    descripcion: 'grp_descripcion',
+    ubicacion: 'grp_ubicacion',
+    conteo: 'grp_conteo',
+    almacen: 'grp_almacen',
+    marca: 'grp_marca',
+    serie_lote: 'serieLoteGroup',
+    vcto: 'vctoGroup',
+    observacion: 'grp_observacion',
+  };
+
+  for (const [campo, groupId] of Object.entries(GRUPOS)) {
+    const cfg = cfgDe(campo);
+    if (!cfg) continue;
+    const group = document.getElementById(groupId);
+    if (!group) continue;
+
+    // La fila de serie/vcto se controla aparte (depende de maneja_serie_lote)
+    if (campo === 'serie_lote' || campo === 'vcto') continue;
+
+    group.style.display = cfg.activo ? '' : 'none';
+
+    const label = group.querySelector('label');
+    const input = group.querySelector('input, select');
+    if (label) {
+      const base = label.textContent.replace(/\s*\*$/, '');
+      label.textContent = base + (cfg.activo && cfg.obligatorio ? ' *' : '');
+    }
+    if (input && input.type !== 'checkbox') {
+      input.required = cfg.activo && cfg.obligatorio;
+    }
+  }
+
+  updateSerieVctoRow();
+}
+
+// Muestra/oculta la fila Lote+Serie segun: config admin Y maneja_serie_lote
+function updateSerieVctoRow() {
+  const row = document.getElementById('loteVctoRow');
+  if (!row) return;
+
+  const cfgSerie = cfgDe('serie_lote');
+  const cfgVcto = cfgDe('vcto');
+  // Si el articulo requiere serie/lote, el campo se fuerza (lo exige la BD)
+  const serieActivo = serieLoteRequerido ? true : (cfgSerie ? cfgSerie.activo : true);
+  const vctoActivo = cfgVcto ? cfgVcto.activo : true;
+
+  document.getElementById('serieLoteGroup').style.display = serieActivo ? '' : 'none';
+  document.getElementById('vctoGroup').style.display = vctoActivo ? '' : 'none';
+
+  const mostrarFila = serieLoteRequerido && (serieActivo || vctoActivo);
+  row.style.display = mostrarFila ? 'flex' : 'none';
+
+  const serieInput = document.getElementById('f_serie_lote');
+  serieInput.required = serieLoteRequerido;
+}
+
+// Valida el payload segun la configuracion de campos del admin.
+// Devuelve mensaje de error o null si todo esta bien.
+function validarSegunConfig(valores) {
+  // Estos campos son NOT NULL en la BD: siempre obligatorios
+  if (!valores.codigo) return 'El codigo es requerido';
+  if (!valores.ubicacion) return 'La ubicacion es requerida';
+  if (isNaN(valores.conteo) || valores.conteo < 0) {
+    return 'El conteo debe ser un numero mayor o igual a 0';
+  }
+
+  // Los demas siguen la config del admin (si no hay config, se comporta como antes)
+  const obligatorio = (campo, porDefecto) => {
+    const cfg = cfgDe(campo);
+    return cfg ? (cfg.activo && cfg.obligatorio) : porDefecto;
+  };
+  const activo = (campo) => {
+    const cfg = cfgDe(campo);
+    return cfg ? cfg.activo : true;
+  };
+
+  if (activo('unidad') && obligatorio('unidad', true) && !valores.cunidad) {
+    return 'La unidad es requerida';
+  }
+  if (activo('descripcion') && obligatorio('descripcion', false) && !valores.descripcion) {
+    return 'La descripcion es requerida';
+  }
+  if (activo('almacen') && obligatorio('almacen', false) && !valores.almacen) {
+    return 'El almacen es requerido';
+  }
+  if (activo('marca') && obligatorio('marca', false) && !valores.marca) {
+    return 'La marca es requerida';
+  }
+  if (serieLoteRequerido && (valores.serie_lote === '-' || !valores.serie_lote)) {
+    return 'Este articulo requiere un numero de Serie/Lote valido';
+  }
+  if (activo('vcto') && serieLoteRequerido && obligatorio('vcto', false) && !valores.vcto_capturado) {
+    return 'El vencimiento es requerido';
+  }
+  if (activo('observacion') && obligatorio('observacion', false) && !valores.observacion) {
+    return 'La nota es requerida';
+  }
+
+  return null;
 }
 
 function bindEvents() {
@@ -222,8 +352,8 @@ async function searchCodigo(codigo) {
       document.getElementById('f_vcto').value = '';
 
       if (match.maneja_serie_lote) {
-        document.getElementById('loteVctoRow').style.display = 'flex';
-        document.getElementById('f_serie_lote').required = true;
+        serieLoteRequerido = true;
+        updateSerieVctoRow();
       }
 
       statusEl.textContent = `Encontrado: ${match.codigo} - ${match.descripcion}`;
@@ -261,9 +391,10 @@ async function searchCodigo(codigo) {
 }
 
 function clearSerieLote() {
-  document.getElementById('loteVctoRow').style.display = 'none';
+  serieLoteRequerido = false;
   document.getElementById('f_serie_lote').required = false;
   document.getElementById('f_serie_lote').value = '';
+  updateSerieVctoRow();
 }
 
 function resetForm() {
@@ -296,27 +427,17 @@ async function handleCaptureSubmit(e) {
   const ubicacion = document.getElementById('f_ubicacion').value.trim();
   const conteo = parseFloat(document.getElementById('f_conteo').value);
   const cunidad = document.getElementById('f_unidad').value;
+  const almacen = document.getElementById('f_almacen').value.trim() || null;
+  const marca = document.getElementById('f_marca').value.trim() || null;
   const serie_lote = document.getElementById('f_serie_lote').value.trim() || '-';
   const vcto_capturado = document.getElementById('f_vcto').value || null;
   const observacion = document.getElementById('f_observacion').value.trim() || null;
 
-  if (!codigo) {
-    errorDiv.textContent = 'El codigo es requerido';
-    errorDiv.style.display = 'block';
-    return;
-  }
-  if (!ubicacion) {
-    errorDiv.textContent = 'La ubicacion es requerida';
-    errorDiv.style.display = 'block';
-    return;
-  }
-  if (isNaN(conteo) || conteo < 0) {
-    errorDiv.textContent = 'El conteo debe ser un numero mayor o igual a 0';
-    errorDiv.style.display = 'block';
-    return;
-  }
-  if (!cunidad) {
-    errorDiv.textContent = 'La unidad es requerida';
+  // Validacion segun config del admin. codigo/ubicacion/conteo son NOT NULL
+  // en la BD, siempre se exigen sin importar la configuracion.
+  const err = validarSegunConfig({ codigo, ubicacion, conteo, cunidad, almacen, marca, serie_lote, vcto_capturado, observacion });
+  if (err) {
+    errorDiv.textContent = err;
     errorDiv.style.display = 'block';
     return;
   }
@@ -332,7 +453,9 @@ async function handleCaptureSubmit(e) {
       descripcion: descripcion || null,
       ubicacion,
       conteo,
-      cunidad,
+      cunidad: cunidad || null,
+      almacen,
+      marca,
       serie_lote,
       vcto_capturado,
       observacion,

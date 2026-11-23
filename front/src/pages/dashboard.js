@@ -13,6 +13,7 @@ const ROLE_MENU = {
     { label: 'Tabla Maestra', icon: '📋', hash: '#/admin/maestra' },
     { label: 'Barridos', icon: '📅', hash: '#/admin/barridos' },
     { label: 'Cargas Masivas', icon: '📁', hash: '#/admin/cargas' },
+    { label: 'Campos de Captura', icon: '🧩', hash: '#/admin/config-captura' },
     { label: 'Reportes', icon: '📊', hash: '#/reportes' },
   ],
   admin: [
@@ -20,6 +21,7 @@ const ROLE_MENU = {
     { label: 'Tabla Maestra', icon: '📋', hash: '#/admin/maestra' },
     { label: 'Barridos', icon: '📅', hash: '#/admin/barridos' },
     { label: 'Cargas Masivas', icon: '📁', hash: '#/admin/cargas' },
+    { label: 'Campos de Captura', icon: '🧩', hash: '#/admin/config-captura' },
     { label: 'Reportes', icon: '📊', hash: '#/reportes' },
   ],
   inventariador: [

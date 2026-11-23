@@ -7,6 +7,7 @@ import { renderUsuarios } from './pages/admin/usuarios.js';
 import { renderMaestra } from './pages/admin/maestra.js';
 import { renderCargas } from './pages/admin/cargas.js';
 import { renderBarridos } from './pages/admin/barridos.js';
+import { renderConfigCaptura } from './pages/admin/configcaptura.js';
 import { renderCaptura } from './pages/inventariador/captura.js';
 import { renderReportes } from './pages/reportes/reportes.js';
 
@@ -42,6 +43,7 @@ const routes = {
   '/admin/maestra': requireAuth(renderMaestra),
   '/admin/cargas': requireAuth(renderCargas),
   '/admin/barridos': requireAuth(renderBarridos),
+  '/admin/config-captura': requireAuth(renderConfigCaptura),
   '/captura': requireAuth(renderCaptura),
   '/reportes': requireAuth(renderReportes),
 };

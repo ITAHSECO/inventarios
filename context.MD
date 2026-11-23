@@ -87,6 +87,14 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 - `asignado_por` (UUID, FK `public.perfiles.id`, NULL)
 - `created_at` (TIMESTAMPTZ)
 
+### G. `public.config_campos_captura` (Config del formulario de captura)
+- `campo` (VARCHAR(50), PK) -> `codigo`, `unidad`, `descripcion`, `ubicacion`, `conteo`, `almacen`, `marca`, `serie_lote`, `vcto`, `observacion`
+- `activo` (BOOLEAN, DEFAULT TRUE) -> El campo se muestra en el form
+- `obligatorio` (BOOLEAN, DEFAULT FALSE) -> El campo es requerido
+- `updated_at` (TIMESTAMPTZ)
+- `updated_by` (UUID, FK `public.perfiles.id`, NULL)
+*RLS:* SELECT para autenticados; UPDATE para superadmin/admin; INSERT para superadmin.
+
 ---
 
 ## 3. LÓGICA DE NEGOCIO Y REGLAS AUTOMÁTICAS (TRIGGERS Y FUNCIONES)
@@ -96,7 +104,7 @@ El sistema utiliza un ENUM `public.app_role` con los siguientes niveles:
 2. **Validación de Serie/Lote:**
    - Trigger `trg_conteos_validar_serie_lote` en `captura_inventario_conteos`: Consulta `planillasinventario.maneja_serie_lote`. Si es `TRUE`, rechaza la inserción/edición si el `serie_lote` capturado es vacío, nulo o '-'.
 3. **Normalización:**
-   - Formateo a mayúsculas y eliminación de espacios en blanco (`UPPER(TRIM())`) para claves en maestra, ubicaciones y series/lotes.
+   - Formateo a mayúsculas y eliminación de espacios en blanco (`UPPER(TRIM())`) para claves en maestra, ubicaciones, series/lotes, **almacen y marca** (vía `fn_validar_serie_lote_obligatorio`).
 4. **Verificación de PIN Supervisor:**
    - `public.fn_establecer_pin_supervisor(p_usuario_id, p_nuevo_pin)`: Encripta PIN con `crypt(p_nuevo_pin, gen_salt('bf', 8))`.
    - `public.fn_validar_pin_supervisor(p_username, p_pin_ingresado)`: Comprueba credenciales y devuelve estado de validación para autorizar ediciones críticas en el cliente.
@@ -159,7 +167,9 @@ back/
 │   ├── 002_rename_articulo_to_descripcion.sql
 │   ├── 003_add_barrido_id_to_conteos.sql  # barrido_id FK, drop planilla_id, widen cunidad
 │   ├── 004_recreate_vw_resumen_diferencias.sql  # Recrea vista rota (join por barrido+codigo)
-│   └── auto_005_add_almacen_marca_to_conteos.sql  # AUTO: agrega almacen y marca a conteos
+│   ├── auto_005_add_almacen_marca_to_conteos.sql  # AUTO: agrega almacen y marca a conteos
+│   ├── auto_006_fix_trigger_y_vista_conteos.sql  # AUTO: drop planilla_id, trigger por barrido+codigo, recrea vista
+│   └── auto_007_config_campos_captura.sql  # AUTO: tabla de config de campos del form de captura
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -181,6 +191,7 @@ back/
     │   ├── planillas.routes.js
     │   ├── barridos.routes.js
     │   ├── conteos.routes.js
+    │   ├── configcaptura.routes.js
     │   └── reportes.routes.js
     ├── controllers/              # Lógica request/response
     ├── services/                 # Lógica de negocio + Supabase
@@ -281,7 +292,7 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
 
-**NOTA crear conteo:** El campo `planilla_id` fue eliminado. Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario.
+**NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen` y `marca` (VARCHAR(100), opcionales; se guardan en MAYÚSCULAS vía trigger).
 
 ### Reportes (`/api/reportes`)
 | Método | Ruta | Descripción | Roles |
@@ -289,6 +300,14 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/dashboard` | Métricas agregadas | Autenticado |
 | GET | `/resumen-diferencias` | Resumen paginado de diferencias | Autenticado |
 | GET | `/resumen-diferencias-completo` | Resumen completo (EXACTO/SOBRANTE/FALTANTE) | Autenticado |
+
+### Config Captura (`/api/config-captura`)
+| Método | Ruta | Descripción | Roles |
+|--------|------|-------------|-------|
+| GET | `/` | Config de campos del form (activo/obligatorio) | Autenticado |
+| PUT | `/` | Actualizar config (`{ campos: [{campo, activo, obligatorio}] }`) | superadmin, admin |
+
+**NOTA config-captura:** Tabla `config_campos_captura` (PK `campo`). Campos: `codigo`, `unidad`, `descripcion`, `ubicacion`, `conteo`, `almacen`, `marca`, `serie_lote`, `vcto`, `observacion`. La página admin `#/admin/config-captura` permite activar/desactivar cada campo y marcarlo obligatorio; el formulario de captura (`#/captura`) los aplica al cargar. `codigo`, `ubicacion` y `conteo` son NOT NULL en la BD: siempre se exigen aunque la config los desactive (en admin se muestra su estado, pero la validación final los valida siempre). `serie_lote` y `vcto` solo se muestran si el artículo tiene `maneja_serie_lote=true` (además de la config).
 
 ---
 
@@ -358,10 +377,10 @@ inventarios/
 │   │   │   ├── login.js          # Login (default)
 │   │   │   ├── registro.js       # Registro de usuarios
 │   │   │   ├── dashboard.js      # Dashboard con menu por rol
-│   │   │   ├── admin/            # usuarios, maestra, cargas, barridos
+│   │   │   ├── admin/            # usuarios, maestra, cargas, barridos, configcaptura
 │   │   │   ├── inventariador/    # captura
 │   │   │   └── reportes/         # reportes
-│   │   ├── services/             # api.js, auth.service.js, catalogos.service.js, barridos.service.js, planillas.service.js, conteos.service.js
+│   │   ├── services/             # api.js, auth.service.js, catalogos.service.js, barridos.service.js, planillas.service.js, conteos.service.js, configcaptura.service.js
 │   │   ├── styles/               # auth.css, dashboard.css
 │   │   └── utils/                # constants.js (API_BASE), csv.js (parseCSV)
 │   ├── public/assets/            # Logo personalizable (logo.png)
@@ -384,6 +403,7 @@ inventarios/
 | `#/admin/maestra` | Tabla Maestra | superadmin, admin |
 | `#/admin/cargas` | Cargas Masivas | superadmin, admin |
 | `#/admin/barridos` | Barridos | superadmin, admin |
+| `#/admin/config-captura` | Campos Formulario Captura | superadmin, admin |
 | `#/captura` | Captura Inventario | inventariador |
 | `#/reportes` | Reportes | Todos |
 
@@ -532,6 +552,8 @@ Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **a
 | Script | Estado | Descripción |
 |--------|--------|-------------|
 | `auto_005_add_almacen_marca_to_conteos.sql` | ✅ Aplicado | Agrega columnas `almacen VARCHAR(100)` y `marca VARCHAR(100)` a `captura_inventario_conteos` |
+| `auto_006_fix_trigger_y_vista_conteos.sql` | ✅ Aplicado | Elimina `planilla_id`, redefine trigger de serie/lote por `barrido+codigo` (antes por `planilla_id`, anulado), recrea `vw_resumen_diferencias_inventario` con `barrido+codigo` y agrega `almacen`/`marca` a la vista |
+| `auto_007_config_campos_captura.sql` | ✅ Aplicado | Crea `config_campos_captura` (10 campos sembrados) + RLS (SELECT autenticados, UPDATE superadmin/admin) |
 
 **Convención:** toda acción sobre la base de datos (aunque se ejecute directamente por consola) debe dejar su script `auto_*` correspondiente en `back/migrations/`.
 
@@ -539,9 +561,8 @@ Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **a
 - Cliente instalado: `C:\Program Files\PostgreSQL\17\bin\psql.exe` (PostgreSQL 17.12)
 - Conexión: `psql -h db.mgapfghsthvkxgpslgic.supabase.co -p 5432 -U postgres -d postgres` (password en sección 6)
 
-### ⚠️ PENDIENTE: la BD de producción no refleja las migraciones 003/004
-Verificado el 2026-11-19 directamente contra la BD:
-- `captura_inventario_conteos` **aún tiene la columna `planilla_id`** (la migración 003 debió eliminarla), aunque `barrido_id` sí existe y `cunidad` sí tiene 50 chars.
-- El trigger `trg_conteos_validar_serie_lote` valida con `WHERE id = NEW.planilla_id`. Como el backend ya **no envía** `planilla_id` (es NULL), la validación de serie/lote **queda anulada** en producción.
-- La vista `vw_resumen_diferencias_inventario` aún hace `JOIN ... ON c.planilla_id = p.id` (versión 001), no la de la migración 004 (`barrido+codigo`). Como los conteos nuevos tienen `planilla_id = NULL`, **no aparecen en los reportes**.
-- **Acción requerida:** aplicar las migraciones 003 y 004 (o un script `auto_006` equivalente) para eliminar `planilla_id`, redefinir el trigger sobre `barrido_id`+`codigo` y recrear la vista.
+### ✅ RESUELTO (2026-11-22): integridad reparada con `auto_006`
+Verificado y corregido directamente contra la BD:
+- ✅ `planilla_id` **eliminada** de `captura_inventario_conteos`
+- ✅ Trigger `trg_conteos_validar_serie_lote` redefinido: valida `maneja_serie_lote` por **`barrido + codigo`** (antes usaba `NEW.planilla_id`, que el backend ya no enviaba → validación anulada). También normaliza `almacen` y `marca`.
+- ✅ Vista `vw_resumen_diferencias_inventario` recreada con `JOIN ... ON p.barrido = c.barrido AND p.codigo = c.codigo` (versión 004) + columnas `almacen`/`marca`
