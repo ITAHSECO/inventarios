@@ -8,6 +8,7 @@ let barridos = [];
 let unidades = [];
 let almacenes = [];
 let marcas = [];
+let estados = [];
 let currentBarrido = '';
 let currentBarridoId = null;
 let searchTimer = null;
@@ -22,19 +23,21 @@ export async function renderCaptura(container) {
   const user = getUser();
 
   try {
-    const [barridosRes, unidadesRes, configRes, almacenesRes, marcasRes] = await Promise.all([
+    const [barridosRes, unidadesRes, configRes, almacenesRes, marcasRes, estadosRes] = await Promise.all([
       barridosService.getMisBarridos(),
       catalogosService.getActivos('CUNIDAD'),
       configCapturaService.getAll(),
       catalogosService.getActivos('ALMACEN'),
       catalogosService.getActivos('MARCA'),
+      catalogosService.getActivos('ESTADO'),
     ]);
     barridos = barridosRes.data || [];
     unidades = unidadesRes.data || [];
     fieldConfig = configRes.data || [];
     almacenes = almacenesRes.data || [];
     marcas = marcasRes.data || [];
-  } catch { barridos = []; unidades = []; fieldConfig = []; almacenes = []; marcas = []; }
+    estados = estadosRes.data || [];
+  } catch { barridos = []; unidades = []; fieldConfig = []; almacenes = []; marcas = []; estados = []; }
 
   container.innerHTML = `
     <div class="dashboard">
@@ -115,6 +118,13 @@ export async function renderCaptura(container) {
                   ${marcas.map(m => `<option value="${m.descripcion}">${m.id_elemento}</option>`).join('')}
                 </datalist>
               </div>
+              <div class="form-group" id="grp_estado">
+                <label for="f_estado">Estado</label>
+                <select id="f_estado">
+                  <option value="">Seleccione...</option>
+                  ${estados.map(e => `<option value="${e.id_elemento}">${e.id_elemento} - ${e.descripcion}</option>`).join('')}
+                </select>
+              </div>
             </div>
             <div class="form-row" id="loteVctoRow" style="display:none;">
               <div class="form-group" id="serieLoteGroup">
@@ -170,6 +180,7 @@ function applyFieldConfig() {
     conteo: 'grp_conteo',
     almacen: 'grp_almacen',
     marca: 'grp_marca',
+    estado: 'grp_estado',
     serie_lote: 'serieLoteGroup',
     vcto: 'vctoGroup',
     observacion: 'grp_observacion',
@@ -252,6 +263,9 @@ function validarSegunConfig(valores) {
   }
   if (activo('marca') && obligatorio('marca', false) && !valores.marca) {
     return 'La marca es requerida';
+  }
+  if (activo('estado') && obligatorio('estado', false) && !valores.estado) {
+    return 'El estado es requerido';
   }
   if (serieLoteRequerido && (valores.serie_lote === '-' || !valores.serie_lote)) {
     return 'Este articulo requiere un numero de Serie/Lote valido';
@@ -441,13 +455,14 @@ async function handleCaptureSubmit(e) {
   const cunidad = document.getElementById('f_unidad').value;
   const almacen = document.getElementById('f_almacen').value.trim() || null;
   const marca = document.getElementById('f_marca').value.trim() || null;
+  const estado = document.getElementById('f_estado').value.trim() || null;
   const serie_lote = document.getElementById('f_serie_lote').value.trim() || '-';
   const vcto_capturado = document.getElementById('f_vcto').value || null;
   const observacion = document.getElementById('f_observacion').value.trim() || null;
 
   // Validacion segun config del admin. codigo/ubicacion/conteo son NOT NULL
   // en la BD, siempre se exigen sin importar la configuracion.
-  const err = validarSegunConfig({ codigo, ubicacion, conteo, cunidad, almacen, marca, serie_lote, vcto_capturado, observacion });
+  const err = validarSegunConfig({ codigo, ubicacion, conteo, cunidad, almacen, marca, estado, serie_lote, vcto_capturado, observacion });
   if (err) {
     errorDiv.textContent = err;
     errorDiv.style.display = 'block';
@@ -468,6 +483,7 @@ async function handleCaptureSubmit(e) {
       cunidad: cunidad || null,
       almacen,
       marca,
+      estado,
       serie_lote,
       vcto_capturado,
       observacion,

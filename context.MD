@@ -170,7 +170,8 @@ back/
 │   ├── auto_005_add_almacen_marca_to_conteos.sql  # AUTO: agrega almacen y marca a conteos
 │   ├── auto_006_fix_trigger_y_vista_conteos.sql  # AUTO: drop planilla_id, trigger por barrido+codigo, recrea vista
 │   ├── auto_007_config_campos_captura.sql  # AUTO: tabla de config de campos del form de captura
-│   └── auto_009_cascade_delete_barridos.sql  # AUTO: FK conteos->barridos ON DELETE CASCADE
+│   ├── auto_009_cascade_delete_barridos.sql  # AUTO: FK conteos->barridos ON DELETE CASCADE
+│   └── auto_010_estado_en_capturas.sql  # AUTO: catalogo ESTADO en maestra + columna estado en conteos
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -293,11 +294,12 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
 
-**NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen` y `marca` (VARCHAR(100), opcionales).
+**NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen`, `marca` y `estado` (opcionales).
 
-**NOTA almacen/marca en captura:**
+**NOTA almacen/marca/estado en captura:**
 - **Almacén**: `<select>` nativo cargado de `maestra_parametros` `id_tabla='ALMACEN'` (13 elem.) vía `GET /api/catalogos/activos?id_tabla=ALMACEN`. Guarda el **`id_elemento`** (código, ej. `0001`), igual que `planillasinventario.id_alm`.
 - **Marca**: `<input type="text">` con `<datalist>` (`#marca-options`) cargado de `id_tabla='MARCA'` (334 elem.). Al escribir sugiere por `descripcion` (el `value` de cada opción es la descripción). Guarda **la descripción escrita/seleccionada** y admite valores libres (marcas fuera del catálogo). Para cruzar con `planillasinventario.id_marca` (que guarda el código) hay que mapear vía `maestra_parametros` (`descripcion → id_elemento`).
+- **Estado**: `<select>` nativo cargado de `maestra_parametros` `id_tabla='ESTADO'` (3 elem.) vía `GET /api/catalogos/activos?id_tabla=ESTADO`. Opciones: `1 - VIGENTE`, `2 - DETERIORADO`, `3 - VENCIDO`. Guarda el **`id_elemento`** (`1`, `2` o `3`). Se gestiona desde `#/admin/maestra` (filtro por tabla ESTADO) y se puede subir masivamente desde `#/admin/cargas` (tab "Tablas Maestras", CSV con columnas `id_elemento, descripcion, activo`).
 
 ### Reportes (`/api/reportes`)
 | Método | Ruta | Descripción | Roles |
@@ -560,6 +562,7 @@ Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **a
 | `auto_006_fix_trigger_y_vista_conteos.sql` | ✅ Aplicado | Elimina `planilla_id`, redefine trigger de serie/lote por `barrido+codigo` (antes por `planilla_id`, anulado), recrea `vw_resumen_diferencias_inventario` con `barrido+codigo` y agrega `almacen`/`marca` a la vista |
 | `auto_007_config_campos_captura.sql` | ✅ Aplicado | Crea `config_campos_captura` (10 campos sembrados) + RLS (SELECT autenticados, UPDATE superadmin/admin) |
 | `auto_009_cascade_delete_barridos.sql` | ✅ Aplicado | Cambia FK `captura_inventario_conteos.barrido_id` de `NO ACTION` a `ON DELETE CASCADE` para permitir eliminar barridos con sus conteos asociados |
+| `auto_010_estado_en_capturas.sql` | ✅ Aplicado | Siembra catálogo ESTADO en `maestra_parametros` (1=VIGENTE, 2=DETERIORADO, 3=VENCIDO) y agrega columna `estado VARCHAR(50)` a `captura_inventario_conteos` |
 
 **Convención:** toda acción sobre la base de datos (aunque se ejecute directamente por consola) debe dejar su script `auto_*` correspondiente en `back/migrations/`.
 
