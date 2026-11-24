@@ -13,6 +13,7 @@ export const barridosService = {
   getById: (id) => api.get(`/barridos/${id}`),
   create: (data) => api.post('/barridos', data),
   update: (id, data) => api.put(`/barridos/${id}`, data),
+  delete: (id) => api.delete(`/barridos/${id}`),
   getUsuarios: (id) => api.get(`/barridos/${id}/usuarios`),
   asignarUsuarios: (id, usuario_ids) => api.post(`/barridos/${id}/usuarios`, { usuario_ids }),
   desasignarUsuario: (id, uid) => api.delete(`/barridos/${id}/usuarios/${uid}`),

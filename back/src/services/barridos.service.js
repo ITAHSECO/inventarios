@@ -130,6 +130,65 @@ class BarridosService {
     if (count === 0) throw ApiError.notFound('Asignacion no encontrada');
   }
 
+  async delete(id) {
+    logger.info({ id }, '[BarridosService] Delete');
+
+    // Verificar que exista (y quedarnos con el nombre para el log)
+    const { data: barrido, error: findError } = await supabaseAdmin
+      .from('barridos')
+      .select('id, nombre')
+      .eq('id', id)
+      .single();
+
+    if (findError || !barrido) throw ApiError.notFound('Barrido no encontrado');
+
+    // Contar conteos que se eliminaran (para el mensaje de respuesta):
+    // los que apuntan por FK y los legacy que solo coinciden por nombre
+    const { count: conteosPorFk, error: countError } = await supabaseAdmin
+      .from('captura_inventario_conteos')
+      .select('*', { count: 'exact', head: true })
+      .eq('barrido_id', id);
+
+    if (countError) throw ApiError.internal(countError.message);
+
+    const { count: conteosLegacy, error: legacyCountError } = await supabaseAdmin
+      .from('captura_inventario_conteos')
+      .select('*', { count: 'exact', head: true })
+      .is('barrido_id', null)
+      .eq('barrido', barrido.nombre);
+
+    if (legacyCountError) throw ApiError.internal(legacyCountError.message);
+
+    const conteosAsociados = (conteosPorFk || 0) + (conteosLegacy || 0);
+
+    // Conteos legacy sin barrido_id (solo guardan el nombre): la cascada
+    // no los alcanza, se eliminan explicitamente por coincidencia de nombre
+    const { error: legacyError } = await supabaseAdmin
+      .from('captura_inventario_conteos')
+      .delete()
+      .is('barrido_id', null)
+      .eq('barrido', barrido.nombre);
+
+    if (legacyError) throw ApiError.internal(legacyError.message);
+
+    // Eliminar barrido. La FK barrido_id -> ON DELETE CASCADE (auto_009)
+    // elimina los conteos; barrido_usuarios ya era CASCADE.
+    const { error } = await supabaseAdmin
+      .from('barridos')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.code === '23503') {
+        throw ApiError.conflict('No se puede eliminar el barrido: tiene registros asociados');
+      }
+      throw ApiError.internal(error.message);
+    }
+
+    logger.info({ id, nombre: barrido.nombre, conteos_eliminados: conteosAsociados }, '[BarridosService] Deleted');
+    return { barrido, conteos_eliminados: conteosAsociados || 0 };
+  }
+
   async getMisBarridos(usuarioId) {
     logger.info({ usuarioId }, '[BarridosService] GetMisBarridos');
     const { data, error } = await supabaseAdmin

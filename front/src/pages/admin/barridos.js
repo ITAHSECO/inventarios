@@ -6,6 +6,14 @@ let currentPage = 1;
 let currentEstado = '';
 let currentSearch = '';
 
+function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user'));
+  } catch {
+    return null;
+  }
+}
+
 export async function renderBarridos(container) {
   container.innerHTML = `
     <div class="page-container">
@@ -112,6 +120,9 @@ async function loadBarridos() {
       return;
     }
 
+    const user = getUser();
+    const isSuperadmin = user && user.rol === 'superadmin';
+
     tableEl.innerHTML = `
       <table class="data-table">
         <thead>
@@ -133,6 +144,7 @@ async function loadBarridos() {
               <td class="actions-cell">
                 <button class="btn-icon" title="Editar" onclick="window._editBarrido(${b.id})">&#9998;</button>
                 <button class="btn-icon" title="Asignar usuarios" onclick="window._openAsignar(${b.id}, '${b.nombre}')">&#128101;</button>
+                ${isSuperadmin ? `<button class="btn-icon btn-danger" title="Eliminar barrido y sus conteos" onclick="window._deleteBarrido(${b.id})">&#128465;</button>` : ''}
               </td>
             </tr>
           `).join('')}
@@ -154,6 +166,33 @@ function bindRowActions(data) {
     if (barrido) openEditModal(barrido);
   };
   window._openAsignar = (id, nombre) => openAsignarModal(id, nombre);
+  window._deleteBarrido = async (id) => {
+    const barrido = data.find(b => b.id === id);
+    if (!barrido) return;
+
+    const confirmacion = prompt(
+      `ELIMINAR BARRIDO\n\n` +
+      `Se eliminara "${barrido.nombre}" JUNTO CON TODOS SUS CONTEOS DE CAPTURA y sus asignaciones.\n` +
+      `Esta accion NO se puede deshacer.\n\n` +
+      `Escriba ELIMINAR para confirmar:`
+    );
+    if (confirmacion === null) return;
+    if (confirmacion.trim().toUpperCase() !== 'ELIMINAR') {
+      if (confirmacion.trim() !== '') alert('Confirmacion incorrecta. El barrido NO fue eliminado.');
+      return;
+    }
+
+    try {
+      console.log('[Barridos] Deleting:', id);
+      const result = await barridosService.delete(id);
+      console.log('[Barridos] Deleted:', result);
+      alert(result.data?.message || 'Barrido eliminado.');
+      loadBarridos();
+    } catch (err) {
+      console.error('[Barridos] Delete failed:', err.message);
+      alert('Error al eliminar: ' + err.message);
+    }
+  };
 }
 
 function renderPagination(meta) {

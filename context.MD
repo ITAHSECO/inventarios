@@ -169,7 +169,8 @@ back/
 │   ├── 004_recreate_vw_resumen_diferencias.sql  # Recrea vista rota (join por barrido+codigo)
 │   ├── auto_005_add_almacen_marca_to_conteos.sql  # AUTO: agrega almacen y marca a conteos
 │   ├── auto_006_fix_trigger_y_vista_conteos.sql  # AUTO: drop planilla_id, trigger por barrido+codigo, recrea vista
-│   └── auto_007_config_campos_captura.sql  # AUTO: tabla de config de campos del form de captura
+│   ├── auto_007_config_campos_captura.sql  # AUTO: tabla de config de campos del form de captura
+│   └── auto_009_cascade_delete_barridos.sql  # AUTO: FK conteos->barridos ON DELETE CASCADE
 └── src/
     ├── index.js                  # Entry point (server startup)
     ├── app.js                    # Express app (middleware + rutas)
@@ -273,14 +274,14 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/:id` | Obtener barrido | Autenticado |
 | POST | `/` | Crear barrido | superadmin, admin |
 | PUT | `/:id` | Actualizar barrido | superadmin, admin |
-| DELETE | `/:id` | Eliminar barrido | superadmin |
+| DELETE | `/:id` | Eliminar barrido y sus conteos asociados | superadmin |
 | GET | `/:id/usuarios` | Listar asignados al barrido | superadmin, admin |
 | POST | `/:id/usuarios` | Asignar inventariadores (`{ usuario_ids: [...] }`) | superadmin, admin |
 | DELETE | `/:id/usuarios/:uid` | Desasignar inventariador | superadmin, admin |
 | GET | `/mis-barridos` | Barridos asignados al inventariador actual | inventariador |
 | GET | `/inventariadores` | Listar inventariadores activos (para asignar) | superadmin, admin |
 
-### Conteos (`/api/conteos`)
+**Nota borrado de barridos:** `DELETE /barridos/:id` (solo superadmin) elimina el barrido. Sus conteos de captura se borran en cascada vía FK `ON DELETE CASCADE` (script `auto_009`); sus asignaciones de usuarios (`barrido_usuarios`) ya eran `ON DELETE CASCADE`. Los conteos "legacy" sin `barrido_id` (solo guardan el nombre del barrido) se eliminan explícitamente por coincidencia de nombre en el servicio.
 | Método | Ruta | Descripción | Roles |
 |--------|------|-------------|-------|
 | GET | `/mis-conteos` | Conteos del inventariador | inventariador |
@@ -558,6 +559,7 @@ Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **a
 | `auto_005_add_almacen_marca_to_conteos.sql` | ✅ Aplicado | Agrega columnas `almacen VARCHAR(100)` y `marca VARCHAR(100)` a `captura_inventario_conteos` |
 | `auto_006_fix_trigger_y_vista_conteos.sql` | ✅ Aplicado | Elimina `planilla_id`, redefine trigger de serie/lote por `barrido+codigo` (antes por `planilla_id`, anulado), recrea `vw_resumen_diferencias_inventario` con `barrido+codigo` y agrega `almacen`/`marca` a la vista |
 | `auto_007_config_campos_captura.sql` | ✅ Aplicado | Crea `config_campos_captura` (10 campos sembrados) + RLS (SELECT autenticados, UPDATE superadmin/admin) |
+| `auto_009_cascade_delete_barridos.sql` | ✅ Aplicado | Cambia FK `captura_inventario_conteos.barrido_id` de `NO ACTION` a `ON DELETE CASCADE` para permitir eliminar barridos con sus conteos asociados |
 
 **Convención:** toda acción sobre la base de datos (aunque se ejecute directamente por consola) debe dejar su script `auto_*` correspondiente en `back/migrations/`.
 

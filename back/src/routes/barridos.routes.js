@@ -161,6 +161,34 @@ router.put('/:id', requireRole('superadmin', 'admin'), validate(updateBarridoSch
 
 /**
  * @swagger
+ * /barridos/{id}:
+ *   delete:
+ *     tags: [Barridos]
+ *     summary: Eliminar barrido (y sus conteos asociados)
+ *     description: |
+ *       Elimina el barrido. Sus conteos de captura se eliminan en cascada
+ *       (FK ON DELETE CASCADE, script auto_009) al igual que sus asignaciones
+ *       de usuarios. Solo superadmin.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Barrido eliminado con el numero de conteos afectados
+ *       404:
+ *         description: Barrido no encontrado
+ *       409:
+ *         description: No se puede eliminar por registros asociados
+ */
+router.delete('/:id', requireRole('superadmin'), validate(barridoIdParam), barridosController.delete);
+
+/**
+ * @swagger
  * /barridos/{id}/usuarios:
  *   get:
  *     tags: [Barridos]

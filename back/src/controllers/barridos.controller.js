@@ -72,6 +72,18 @@ class BarridosController {
     }
   }
 
+  async delete(req, res, next) {
+    try {
+      const result = await barridosService.delete(req.validated.params.id);
+      return success(res, {
+        message: `Barrido "${result.barrido.nombre}" eliminado junto con ${result.conteos_eliminados} conteo(s) asociado(s)`,
+        ...result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getMisBarridos(req, res, next) {
     try {
       const barridos = await barridosService.getMisBarridos(req.user.id);
