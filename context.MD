@@ -293,7 +293,7 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id` | Actualizar conteo | inventariador, admin, superadmin |
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
-| GET | `/export` | Exportar capturas de un barrido a CSV (`?barrido_id=` o `?barrido=`) | Autenticado |
+| GET | `/export` | Exportar capturas de un barrido a CSV (`?barrido_id=` o `?barrido=`). Almacén y Estado traen la descripción de la maestra (no el código). | Autenticado |
 
 **NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen`, `marca` y `estado` (opcionales).
 
@@ -301,6 +301,7 @@ El backend usa **dos clientes** Supabase por request:
 - **Almacén**: `<select>` nativo cargado de `maestra_parametros` `id_tabla='ALMACEN'` (13 elem.) vía `GET /api/catalogos/activos?id_tabla=ALMACEN`. Guarda el **`id_elemento`** (código, ej. `0001`), igual que `planillasinventario.id_alm`.
 - **Marca**: `<input type="text">` con `<datalist>` (`#marca-options`) cargado de `id_tabla='MARCA'` (334 elem.). Al escribir sugiere por `descripcion` (el `value` de cada opción es la descripción). Guarda **la descripción escrita/seleccionada** y admite valores libres (marcas fuera del catálogo). Para cruzar con `planillasinventario.id_marca` (que guarda el código) hay que mapear vía `maestra_parametros` (`descripcion → id_elemento`).
 - **Estado**: `<select>` nativo cargado de `maestra_parametros` `id_tabla='ESTADO'` (3 elem.) vía `GET /api/catalogos/activos?id_tabla=ESTADO`. Opciones: `1 - VIGENTE`, `2 - DETERIORADO`, `3 - VENCIDO`. Guarda el **`id_elemento`** (`1`, `2` o `3`). Se gestiona desde `#/admin/maestra` (filtro por tabla ESTADO) y se puede subir masivamente desde `#/admin/cargas` (tab "Tablas Maestras", CSV con columnas `id_elemento, descripcion, activo`).
+- **Export CSV (`GET /conteos/export`)**: Almacén y Estado se descargan con su **descripción** de la maestra (ej. "ALMACEN PRINCIPAL", "VIGENTE"), no con el código numérico.
 
 ### Reportes (`/api/reportes`)
 | Método | Ruta | Descripción | Roles |
