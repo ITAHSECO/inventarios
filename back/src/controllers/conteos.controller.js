@@ -81,6 +81,43 @@ class ConteosController {
       next(error);
     }
   }
+
+  async export(req, res, next) {
+    try {
+      const data = await conteosService.exportCsv(req.validated.query);
+      const csv = toCsv(data);
+      const label = req.validated.query.barrido_id || req.validated.query.barrido || 'export';
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="capturas_${label}.csv"`);
+      res.send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+// ------------------------------------------------------------
+// Helper: array de objetos a CSV (UTF-8 con BOM para Excel)
+// ------------------------------------------------------------
+function toCsv(rows) {
+  if (!rows || rows.length === 0) return '\uFEFF';
+  const cols = [
+    'barrido', 'codigo', 'descripcion', 'ubicacion', 'conteo', 'cunidad',
+    'almacen', 'marca', 'estado', 'serie_lote', 'vcto_capturado', 'observacion',
+    'inventariador_id', 'created_at',
+  ];
+  const esc = (v) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  };
+  const BOM = '\uFEFF';
+  const header = cols.join(',');
+  const body = rows.map((r) => cols.map((c) => esc(r[c])).join(',')).join('\n');
+  return BOM + header + '\n' + body + '\n';
 }
 
 module.exports = new ConteosController();

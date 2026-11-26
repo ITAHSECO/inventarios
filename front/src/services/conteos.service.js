@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import API_BASE from '../utils/constants.js';
 
 export const conteosService = {
   list: (params = {}) => {
@@ -19,4 +20,10 @@ export const conteosService = {
   create: (data) => api.post('/conteos', data),
   update: (id, data) => api.put(`/conteos/${id}`, data),
   delete: (id) => api.delete(`/conteos/${id}`),
+  exportCsv: (barridoId) => {
+    const token = localStorage.getItem('access_token');
+    return fetch(`${API_BASE}/conteos/export?barrido_id=${barridoId}`, {
+      headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+    });
+  },
 };

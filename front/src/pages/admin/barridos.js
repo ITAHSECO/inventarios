@@ -1,4 +1,5 @@
 import { barridosService } from '../../services/barridos.service.js';
+import { conteosService } from '../../services/conteos.service.js';
 
 const ESTADO_LABELS = { activo: 'Activo', inactivo: 'Inactivo', cerrado: 'Cerrado' };
 
@@ -6,13 +7,13 @@ let currentPage = 1;
 let currentEstado = '';
 let currentSearch = '';
 
-function getUser() {
+const getCurrentUser = () => {
   try {
     return JSON.parse(localStorage.getItem('user'));
   } catch {
     return null;
   }
-}
+};
 
 export async function renderBarridos(container) {
   container.innerHTML = `
@@ -120,7 +121,7 @@ async function loadBarridos() {
       return;
     }
 
-    const user = getUser();
+    const user = getCurrentUser();
     const isSuperadmin = user && user.rol === 'superadmin';
 
     tableEl.innerHTML = `
@@ -145,6 +146,7 @@ async function loadBarridos() {
                 <button class="btn-icon" title="Editar" onclick="window._editBarrido(${b.id})">&#9998;</button>
                 <button class="btn-icon" title="Asignar usuarios" onclick="window._openAsignar(${b.id}, '${b.nombre}')">&#128101;</button>
                 ${isSuperadmin ? `<button class="btn-icon btn-danger" title="Eliminar barrido y sus conteos" onclick="window._deleteBarrido(${b.id})">&#128465;</button>` : ''}
+                <button class="btn-icon" title="Descargar capturas (CSV)" onclick="window._downloadCapturas(${b.id})">&#x2B07;</button>
               </td>
             </tr>
           `).join('')}
@@ -191,6 +193,25 @@ function bindRowActions(data) {
     } catch (err) {
       console.error('[Barridos] Delete failed:', err.message);
       alert('Error al eliminar: ' + err.message);
+    }
+  };
+  window._downloadCapturas = async (id) => {
+    try {
+      const res = await conteosService.exportCsv(id);
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || 'Error al descargar capturas');
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `capturas_barrido_${id}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('[Barridos] Download failed:', err.message);
+      alert('Error al descargar capturas: ' + err.message);
     }
   };
 }

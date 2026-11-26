@@ -88,6 +88,16 @@ const listConteosSchema = z.object({
   }),
 });
 
+const exportConteosSchema = z.object({
+  query: z.object({
+    barrido_id: z.coerce.number().int().positive().optional(),
+    barrido: z.string().min(1).max(100).optional(),
+  }).refine(
+    (data) => data.barrido_id || data.barrido,
+    { message: 'Se requiere barrido_id o barrido', path: ['barrido_id'] }
+  ),
+});
+
 module.exports = {
   createConteoSchema,
   bulkConteoSchema,
@@ -95,4 +105,5 @@ module.exports = {
   supervisorEditSchema,
   conteoIdParam,
   listConteosSchema,
+  exportConteosSchema,
 };

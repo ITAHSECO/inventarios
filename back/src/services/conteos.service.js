@@ -173,6 +173,19 @@ class ConteosService {
     if (error) throw ApiError.internal(error.message);
     return { data, total: count };
   }
+
+  async exportCsv({ barrido_id, barrido }) {
+    logger.info({ barrido_id, barrido }, '[ConteosService] ExportCsv');
+    let query = supabaseAdmin.from('captura_inventario_conteos').select('*');
+
+    if (barrido_id) query = query.eq('barrido_id', barrido_id);
+    if (barrido) query = query.eq('barrido', barrido.toUpperCase().trim());
+
+    const { data, error } = await query.order('created_at', { ascending: true });
+
+    if (error) throw ApiError.internal(error.message);
+    return data || [];
+  }
 }
 
 module.exports = new ConteosService();

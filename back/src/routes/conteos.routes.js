@@ -11,6 +11,7 @@ const {
   supervisorEditSchema,
   conteoIdParam,
   listConteosSchema,
+  exportConteosSchema,
 } = require('../validators/conteos.schema');
 
 const router = Router();
@@ -96,6 +97,34 @@ router.get('/mis-conteos', conteosController.getMisConteos);
  *               $ref: '#/components/schemas/PaginatedResponse'
  */
 router.get('/', validate(listConteosSchema), conteosController.list);
+
+/**
+ * @swagger
+ * /conteos/export:
+ *   get:
+ *     tags: [Conteos]
+ *     summary: Exportar capturas de un barrido a CSV
+ *     description: |
+ *       Devuelve todas las capturas de un barrido en formato CSV para descarga.
+ *       Filtrar por barrido_id (FK) o barrido (nombre).
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: barrido_id
+ *         schema: { type: integer }
+ *         description: ID del barrido
+ *       - in: query
+ *         name: barrido
+ *         schema: { type: string }
+ *         description: Nombre del barrido
+ *     responses:
+ *       200:
+ *         description: Archivo CSV de capturas
+ *         content:
+ *           text/csv: {}
+ */
+router.get('/export', authenticateToken, validate(exportConteosSchema), conteosController.export);
 
 /**
  * @swagger

@@ -293,6 +293,7 @@ El backend usa **dos clientes** Supabase por request:
 | PUT | `/:id` | Actualizar conteo | inventariador, admin, superadmin |
 | PUT | `/:id/supervisor-edit` | Edición supervisor (requiere PIN) | admin, superadmin |
 | DELETE | `/:id` | Eliminar conteo | admin, superadmin |
+| GET | `/export` | Exportar capturas de un barrido a CSV (`?barrido_id=` o `?barrido=`) | Autenticado |
 
 **NOTA crear conteo:** El campo `planilla_id` fue eliminado (script `auto_006`, ya aplicado en prod). Se envía `barrido` (nombre del barrido), `barrido_id` (FK al barrido), y `codigo` (código del artículo). El backend valida que la combinación barrido+codigo exista en planillasinventario. Se aceptan además `almacen`, `marca` y `estado` (opcionales).
 
@@ -314,7 +315,7 @@ El backend usa **dos clientes** Supabase por request:
 | GET | `/` | Config de campos del form (activo/obligatorio) | Autenticado |
 | PUT | `/` | Actualizar config (`{ campos: [{campo, activo, obligatorio}] }`) | superadmin, admin |
 
-**NOTA config-captura:** Tabla `config_campos_captura` (PK `campo`). Campos: `codigo`, `unidad`, `descripcion`, `ubicacion`, `conteo`, `almacen`, `marca`, `serie_lote`, `vcto`, `observacion`. La página admin `#/admin/config-captura` permite activar/desactivar cada campo y marcarlo obligatorio; el formulario de captura (`#/captura`) los aplica al cargar. `codigo`, `ubicacion` y `conteo` son NOT NULL en la BD: siempre se exigen aunque la config los desactive (en admin se muestra su estado, pero la validación final los valida siempre). `serie_lote` y `vcto` solo se muestran si el artículo tiene `maneja_serie_lote=true` (además de la config).
+**NOTA config-captura:** Tabla `config_campos_captura` (PK `campo`). Campos: `codigo`, `unidad`, `descripcion`, `ubicacion`, `conteo`, `almacen`, `marca`, `estado`, `serie_lote`, `vcto`, `observacion`. La página admin `#/admin/config-captura` permite activar/desactivar cada campo y marcarlo obligatorio; el formulario de captura (`#/captura`) los aplica al cargar. `codigo`, `ubicacion` y `conteo` son NOT NULL en la BD: siempre se exigen aunque la config los desactive (en admin se muestra su estado, pero la validación final los valida siempre). `serie_lote` y `vcto` solo se muestran si el artículo tiene `maneja_serie_lote=true` (además de la config).
 
 ---
 
@@ -563,6 +564,7 @@ Los scripts con prefijo **`auto_`** en su nombre fueron creados y ejecutados **a
 | `auto_007_config_campos_captura.sql` | ✅ Aplicado | Crea `config_campos_captura` (10 campos sembrados) + RLS (SELECT autenticados, UPDATE superadmin/admin) |
 | `auto_009_cascade_delete_barridos.sql` | ✅ Aplicado | Cambia FK `captura_inventario_conteos.barrido_id` de `NO ACTION` a `ON DELETE CASCADE` para permitir eliminar barridos con sus conteos asociados |
 | `auto_010_estado_en_capturas.sql` | ✅ Aplicado | Siembra catálogo ESTADO en `maestra_parametros` (1=VIGENTE, 2=DETERIORADO, 3=VENCIDO) y agrega columna `estado VARCHAR(50)` a `captura_inventario_conteos` |
+| `auto_011_estado_configurable.sql` | ✅ Aplicado | Agrega `estado` a `config_campos_captura` para que sea configurable (activo/obligatorio) desde #/admin/config-captura |
 
 **Convención:** toda acción sobre la base de datos (aunque se ejecute directamente por consola) debe dejar su script `auto_*` correspondiente en `back/migrations/`.
 
