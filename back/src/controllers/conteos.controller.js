@@ -103,9 +103,25 @@ function toCsv(rows) {
   if (!rows || rows.length === 0) return '\uFEFF';
   const cols = [
     'barrido', 'codigo', 'descripcion', 'ubicacion', 'conteo', 'cunidad',
-    'almacen', 'marca', 'estado', 'serie_lote', 'vcto_capturado', 'observacion',
-    'inventariador_id', 'created_at',
+    'almacen_descripcion', 'marca', 'estado_descripcion', 'serie_lote',
+    'vcto_capturado', 'observacion', 'inventariador_id', 'created_at',
   ];
+  const headers = {
+    barrido: 'Barrido',
+    codigo: 'Codigo',
+    descripcion: 'Descripcion',
+    ubicacion: 'Ubicacion',
+    conteo: 'Conteo',
+    cunidad: 'Unidad',
+    almacen_descripcion: 'Almacen',
+    marca: 'Marca',
+    estado_descripcion: 'Estado',
+    serie_lote: 'Serie/Lote',
+    vcto_capturado: 'Vencimiento',
+    observacion: 'Observacion',
+    inventariador_id: 'Inventariador ID',
+    created_at: 'Fecha',
+  };
   const esc = (v) => {
     if (v === null || v === undefined) return '';
     const s = String(v);
@@ -115,7 +131,7 @@ function toCsv(rows) {
     return s;
   };
   const BOM = '\uFEFF';
-  const header = cols.join(',');
+  const header = cols.map((c) => headers[c] || c).join(',');
   const body = rows.map((r) => cols.map((c) => esc(r[c])).join(',')).join('\n');
   return BOM + header + '\n' + body + '\n';
 }

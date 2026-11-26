@@ -184,7 +184,36 @@ class ConteosService {
     const { data, error } = await query.order('created_at', { ascending: true });
 
     if (error) throw ApiError.internal(error.message);
-    return data || [];
+    if (!data || data.length === 0) return [];
+
+    // ------------------------------------------------------------
+    // Mapear códigos de almacen y estado a sus descripciones
+    // según la tabla maestra (id_tabla='ALMACEN' / id_tabla='ESTADO')
+    // ------------------------------------------------------------
+    const [almacenesRes, estadosRes] = await Promise.all([
+      supabaseAdmin
+        .from('maestra_parametros')
+        .select('id_elemento, descripcion')
+        .eq('id_tabla', 'ALMACEN')
+        .eq('activo', true),
+      supabaseAdmin
+        .from('maestra_parametros')
+        .select('id_elemento, descripcion')
+        .eq('id_tabla', 'ESTADO')
+        .eq('activo', true),
+    ]);
+
+    const mapaAlmacen = new Map();
+    (almacenesRes.data || []).forEach((a) => mapaAlmacen.set(a.id_elemento, a.descripcion));
+
+    const mapaEstado = new Map();
+    (estadosRes.data || []).forEach((e) => mapaEstado.set(e.id_elemento, e.descripcion));
+
+    return data.map((c) => ({
+      ...c,
+      almacen_descripcion: c.almacen ? (mapaAlmacen.get(c.almacen) || c.almacen) : '',
+      estado_descripcion: c.estado ? (mapaEstado.get(c.estado) || c.estado) : '',
+    }));
   }
 }
 
